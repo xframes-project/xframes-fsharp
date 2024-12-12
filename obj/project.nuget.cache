@@ -1,10 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "vy5W6EuogEI=",
+  "dgSpecHash": "8Uv43mSUhwg=",
   "success": true,
-  "projectFilePath": "C:\\u-blox\\gallery\\ubx\\ulogr\\xframes-fsharp\\xframes.fsproj",
+  "projectFilePath": "C:\\dev\\xframes-fsharp\\xframes.fsproj",
   "expectedPackageFiles": [
-    "C:\\Users\\andm\\.nuget\\packages\\fsharp.core\\9.0.100\\fsharp.core.9.0.100.nupkg.sha512"
+    "C:\\Users\\manes\\.nuget\\packages\\fsharp.core\\9.0.100\\fsharp.core.9.0.100.nupkg.sha512"
   ],
   "logs": []
 }
