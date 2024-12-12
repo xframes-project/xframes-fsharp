@@ -52,6 +52,16 @@
               "target": "Package",
               "version": "[9.0.100, )",
               "generatePathProperty": true
+            },
+            "FSharpPlus": {
+              "target": "Package",
+              "version": "[1.7.0, )",
+              "generatePathProperty": true
+            },
+            "Newtonsoft.Json": {
+              "target": "Package",
+              "version": "[13.0.3, )",
+              "generatePathProperty": true
             }
           },
           "imports": [
