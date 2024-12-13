@@ -1,8 +1,10 @@
 ﻿open System
+open System.Threading
 open System.Threading.Tasks
 open System.Collections.Generic
 open System.Runtime.InteropServices
 open Newtonsoft.Json
+open Applier
 
 [<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
 extern void resizeWindow(int width, int height)
@@ -148,12 +150,128 @@ type FontDef = {
     size: int
 }
 
-type Widget = {
+type WidgetNode = {
     Id: int
     Type: string
     mutable Props: Map<string, obj>
-    mutable Children: Widget list
+    mutable Children: WidgetNode list
 }
+
+
+
+// Record types for data structures
+type JsonSetData = { Op: string; Data: obj }
+type JsonSetValue = { Op: string; Value: string }
+type JsonSetSelectedIndex = { Op: string; Index: int }
+type JsonResetData = { Op: string }
+type JsonAppendData = { Op: string; Data: obj }
+type JsonAppendDataToPlotLine = { Op: string; X: float; Y: float }
+type JsonSetAxesDecimalDigits = { Op: string; X: float; Y: float }
+type JsonSetAxesAutoFit = { Op: string; Enabled: bool }
+
+type SetData = {
+    op: string
+    data: List<obj>
+}
+
+module WidgetRegistrationService =
+    // Locking mechanisms
+    let idGeneratorLock = new ReaderWriterLockSlim()
+    let idRegistrationLock = new ReaderWriterLockSlim()
+
+    // Widget registry
+    let widgetRegistry = new Dictionary<int, WidgetNode>()
+    let onClickRegistry = new Dictionary<int, unit -> unit>()
+
+    // Widget ID management
+    let mutable lastWidgetId = 0
+
+    let getWidgetById (id: int) =
+        // Return widget from registry by ID
+        if widgetRegistry.ContainsKey(id) then Some(widgetRegistry.[id]) else None
+
+    let registerWidget (id: int) (widget: WidgetNode) =
+        idRegistrationLock.EnterWriteLock()
+        try
+            widgetRegistry.[id] <- widget
+        finally
+            idRegistrationLock.ExitWriteLock()
+
+    let getNextWidgetId () =
+        idGeneratorLock.EnterWriteLock()
+        try
+            let id = lastWidgetId
+            lastWidgetId <- lastWidgetId + 1
+            id
+        finally
+            idGeneratorLock.ExitWriteLock()
+
+    let registerWidgetForOnClickEvent (id: int) (fn: unit -> unit) =
+        onClickRegistry.[id] <- fn
+
+    let dispatchOnClickEvent (id: int) =
+        if onClickRegistry.ContainsKey(id) then onClickRegistry.[id] ()
+
+    let getStyle () =
+        // Assuming `xFramesWrapper` has a method `getStyle()`
+        // Placeholder for style retrieval
+        ""
+
+    let setData (id: int) (data: List<obj>) =
+        //let opDictionary = SetData
+        //opDictionary.Add("")
+        elementInternalOp(id, JsonConvert.SerializeObject(""))
+
+    let appendData (id: int) (data: List<obj>) =
+        //let jsonData = JsonAppendData(Op = "appendData", Data = data)
+        elementInternalOp(id, JsonConvert.SerializeObject(""))
+
+    let resetData (id: int) =
+        //let jsonData = JsonResetData(Op = "resetData")
+        elementInternalOp(id, JsonConvert.SerializeObject(""))
+
+    let appendDataToPlotLine (id: int) (x: float) (y: float) =
+        //let jsonData = JsonAppendDataToPlotLine(Op = "appendData", X = x, Y = y)
+        elementInternalOp(id, JsonConvert.SerializeObject(""))
+
+    let setPlotLineAxesDecimalDigits (id: int) (x: float) (y: float) =
+        //let jsonData = JsonSetAxesDecimalDigits(Op = "setAxesDecimalDigits", X = x, Y = y)
+        elementInternalOp(id, JsonConvert.SerializeObject(""))
+
+    let setAxisAutoFitEnabled (id: int) (enabled: bool) =
+        //let jsonData = JsonSetAxesAutoFit(Op = "setAxesAutoFit", Enabled = enabled)
+        elementInternalOp(id, JsonConvert.SerializeObject(""))
+
+    let appendTextToClippedMultiLineTextRenderer (id: int) (text: string) =
+        appendTextToClippedMultiLineTextRenderer(id, text)
+
+    let setInputTextValue (id: int) (value: string) =
+        //let jsonData = JsonSetValue(Op = "setValue", Value = value)
+        elementInternalOp(id, JsonConvert.SerializeObject(""))
+
+    let setComboSelectedIndex (id: int) (index: int) =
+        //let jsonData = JsonSetSelectedIndex(Op = "setSelectedIndex", Index = index)
+        elementInternalOp(id, JsonConvert.SerializeObject(""))
+
+
+
+
+
+
+type WidgetNodeAdapter() =
+    member this.FromJson(json: Map<string, obj>) =
+        let ``type`` = json.["type"] :?> string
+        let id = json.["id"] :?> int
+        let props = 
+            json 
+            |> Map.remove "id" 
+            |> Map.remove "type"
+        { Id = id; Type = ``type``; Props = props; Children = [] }
+
+    member this.ToJson(widgetNode: WidgetNode) =
+        widgetNode.Props
+        |> Map.add "id" (box widgetNode.Id)
+        |> Map.add "type" (box widgetNode.Type)
 
 
 let createNode id type' props children =
@@ -163,6 +281,46 @@ let createNode id type' props children =
         Props = props
         Children = children
     }
+
+type WidgetTreeApplier(jsonAdapter: WidgetNodeAdapter, root: WidgetNode) =
+    inherit AbstractApplier<WidgetNode>(root)
+
+    let serializeToJson (data: obj) = JsonConvert.SerializeObject(data)
+    let deserializeList (json: string) =
+        JsonConvert.DeserializeObject<List<int>>(json)
+
+    override this.OnClear() =
+        root.Children <- []
+
+    override this.InsertBottomUp(index: int, instance: WidgetNode) =
+        () // Logic can be implemented as needed
+
+    override this.InsertTopDown(index: int, instance: WidgetNode) =
+        this.Current.Children <- 
+            this.Current.Children.[0..index - 1] @ [instance] @ this.Current.Children.[index..]
+        
+        let json = jsonAdapter.ToJson(instance)
+        let jsonString = serializeToJson json
+        setElement(jsonString)
+        let childrenJson = serializeToJson [ instance.Id ]
+        setChildren(this.Current.Id, childrenJson)
+
+    override this.Move(fromIndex: int, toIndex: int, count: int) =
+        let moveItems list fromIndex toIndex count =
+            let itemsToMove = list |> List.skip fromIndex |> List.take count
+            let remaining = 
+                list 
+                |> List.mapi (fun i x -> if i >= fromIndex && i < fromIndex + count then None else Some x)
+                |> List.choose id
+            let (before, after) = remaining |> List.splitAt toIndex
+            before @ itemsToMove @ after
+        this.Current.Children <- moveItems this.Current.Children fromIndex toIndex count
+
+    override this.Remove(index: int, count: int) =
+        this.Current.Children <- 
+            this.Current.Children.[0..index - 1] @ this.Current.Children.[index + count..]
+
+
 
 let fontDefs =
     let fontSizes = [16; 18; 20; 24; 28; 32; 36; 48]
@@ -261,6 +419,14 @@ let rec keepProcessRunning () =
             do! Task.Delay(1000) |> Async.AwaitTask
     }
 
+//let App id type' props children =
+//    {
+//        Id = id
+//        Type = type'
+//        Props = props
+//        Children = children
+//    }
+
 [<EntryPoint>]
 let main argv =
     
@@ -281,7 +447,7 @@ let main argv =
     let nodeWidget = createNode 3 "Node" (Map.ofList [("style", "vertical")]) [buttonWidget; labelWidget]
 
 
-    printfn "%s" fontDefsJson
+    //printfn "%s" fontDefsJson
 
     // Example call to init (using some mock values)
     let assetsPath = "./assets"
