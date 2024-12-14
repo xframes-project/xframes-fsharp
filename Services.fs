@@ -1,5 +1,6 @@
 ﻿module Services
 open Newtonsoft.Json
+open System.Reactive.Subjects
 open System.Threading
 open System.Collections.Generic
 open Externs
@@ -12,7 +13,9 @@ module WidgetRegistrationService =
 
     // Widget registry
     let widgetRegistry = new Dictionary<int, WidgetNode>()
-    let onClickRegistry = new Dictionary<int, unit -> unit>()
+    //let onClickRegistry = new Dictionary<int, unit -> unit>()
+
+    let onClickRegistry = new BehaviorSubject<Map<int, unit -> unit>>(Map.empty)
 
     // Widget ID management
     let mutable lastWidgetId = 0
@@ -37,11 +40,13 @@ module WidgetRegistrationService =
         finally
             idGeneratorLock.ExitWriteLock()
 
-    let registerWidgetForOnClickEvent (id: int) (fn: unit -> unit) =
-        onClickRegistry.[id] <- fn
+    let registerWidgetForOnClickEvent id fn =
+        onClickRegistry.OnNext(onClickRegistry.Value.Add(id, fn))
 
-    let dispatchOnClickEvent (id: int) =
-        if onClickRegistry.ContainsKey(id) then onClickRegistry.[id] ()
+    let dispatchOnClickEvent id =
+        match onClickRegistry.Value.TryFind id with
+        | Some fn -> fn()
+        | None -> printfn "No event handler for ID %d" id
 
     let getStyle () =
         // Assuming `xFramesWrapper` has a method `getStyle()`

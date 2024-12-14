@@ -1,5 +1,6 @@
 ﻿open System
 open System.Threading
+open System.Reactive.Subjects
 open System.Threading.Tasks
 open System.Collections.Generic
 open System.Runtime.InteropServices
@@ -30,17 +31,30 @@ type SetData = {
 
 
 type WidgetNodeAdapter() =
+    /// Converts a JSON-like Map<string, obj> to a WidgetNode
     member this.FromJson(json: Map<string, obj>) =
         let ``type`` = json.["type"] :?> string
         let id = json.["id"] :?> int
-        let props = 
+        let props =
             json 
             |> Map.remove "id" 
             |> Map.remove "type"
-        { Id = id; Type = ``type``; Props = props; Children = [] }
 
+        // Initialize WidgetNode with reactive Props
+        {
+            Id = id
+            Type = ``type``
+            Props = new BehaviorSubject<Map<string, obj>>(props)
+            Children = [] // Modify if children are part of the JSON
+        }
+
+    /// Converts a WidgetNode to a JSON-like Map<string, obj>
     member this.ToJson(widgetNode: WidgetNode) =
-        widgetNode.Props
+        // Extract Props' current value
+        let props = widgetNode.Props.Value
+
+        // Add `id` and `type` to Props for JSON representation
+        props
         |> Map.add "id" (box widgetNode.Id)
         |> Map.add "type" (box widgetNode.Type)
 
@@ -118,21 +132,28 @@ let rec keepProcessRunning () =
 [<EntryPoint>]
 let main argv =
     
+    // Define individual widget nodes
     let buttonWidget = {
         Id = 1
         Type = "Button"
-        Props = Map.ofList [("text", "Click Me")]
+        Props = new BehaviorSubject<Map<string, obj>>(Map.ofList [("text", box "Click Me")])
         Children = []
     }
 
     let labelWidget = {
         Id = 2
         Type = "Label"
-        Props = Map.ofList [("text", "Hello World")]
+        Props = new BehaviorSubject<Map<string, obj>>(Map.ofList [("text", box "Hello World")])
         Children = []
     }
 
-    let nodeWidget = createNode 3 "Node" (Map.ofList [("style", "vertical")]) [buttonWidget; labelWidget]
+    // Create a node widget with children
+    let nodeWidget = 
+        createWidgetNode 
+            3 
+            "Node" 
+            (Map.ofList [("style", box "vertical")]) 
+            [buttonWidget; labelWidget]
 
 
     //printfn "%s" fontDefsJson

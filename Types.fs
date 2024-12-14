@@ -1,12 +1,12 @@
 ﻿module Types
 
 open System.Collections.Generic
-
+open System.Reactive.Subjects
 
 type WidgetNode = {
     Id: int
     Type: string
-    mutable Props: Map<string, obj>
+    mutable Props: BehaviorSubject<Map<string, obj>>
     mutable Children: WidgetNode list
 }
 
