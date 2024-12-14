@@ -18,3 +18,7 @@ type FontDef = {
     name: string
     size: int
 }
+
+type AppState = {
+    Text: string
+}
