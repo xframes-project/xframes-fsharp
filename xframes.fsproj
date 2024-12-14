@@ -10,13 +10,14 @@
 	<Compile Include="Enums.fs" />
     <Compile Include="Theme.fs" />
 	<Compile Include="Externs.fs" />
-    <Compile Include="Widgets.fs" />
 	<Compile Include="Services.fs" />
+    <Compile Include="Widgets.fs" />
     <Compile Include="Applier.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="DEdge.Diffract" Version="0.4.0" />
     <PackageReference Include="FSharpPlus" Version="1.7.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.Reactive" Version="6.0.1" />

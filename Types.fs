@@ -6,8 +6,8 @@ open System.Reactive.Subjects
 type WidgetNode = {
     Id: int
     Type: string
-    mutable Props: BehaviorSubject<Map<string, obj>>
-    mutable Children: WidgetNode list
+    Props: BehaviorSubject<Map<string, obj>>
+    Children: BehaviorSubject<WidgetNode list>
 }
 
 type Theme2(colorsDict: Dictionary<int, List<obj>>) =

@@ -45,7 +45,7 @@ type WidgetNodeAdapter() =
             Id = id
             Type = ``type``
             Props = new BehaviorSubject<Map<string, obj>>(props)
-            Children = [] // Modify if children are part of the JSON
+            Children = new BehaviorSubject<WidgetNode list>([]) // Modify if children are part of the JSON
         }
 
     /// Converts a WidgetNode to a JSON-like Map<string, obj>
@@ -62,28 +62,42 @@ type WidgetNodeAdapter() =
 type WidgetTreeApplier(jsonAdapter: WidgetNodeAdapter, root: WidgetNode) =
     inherit AbstractApplier<WidgetNode>(root)
 
+    // Helper functions for serialization and deserialization
     let serializeToJson (data: obj) = JsonConvert.SerializeObject(data)
     let deserializeList (json: string) =
         JsonConvert.DeserializeObject<List<int>>(json)
 
+    // Reactive helper: Update `Children` safely
+    let updateChildren (node: WidgetNode) (updateFn: WidgetNode list -> WidgetNode list) =
+        let currentChildren = node.Children.Value
+        node.Children.OnNext(updateFn currentChildren)
+
+    // Clear all children of the root
     override this.OnClear() =
-        root.Children <- []
+        root.Children.OnNext([])
 
+    // Insert a node bottom-up (logic can be customized)
     override this.InsertBottomUp(index: int, instance: WidgetNode) =
-        () // Logic can be implemented as needed
+        updateChildren this.Current (fun children ->
+            children.[0..index - 1] @ [instance] @ children.[index..]
+        )
 
+    // Insert a node top-down
     override this.InsertTopDown(index: int, instance: WidgetNode) =
-        this.Current.Children <- 
-            this.Current.Children.[0..index - 1] @ [instance] @ this.Current.Children.[index..]
+        updateChildren this.Current (fun children ->
+            children.[0..index - 1] @ [instance] @ children.[index..]
+        )
         
         let json = jsonAdapter.ToJson(instance)
         let jsonString = serializeToJson json
         setElement(jsonString)
+
         let childrenJson = serializeToJson [ instance.Id ]
         setChildren(this.Current.Id, childrenJson)
 
+    // Move nodes within the current node's children
     override this.Move(fromIndex: int, toIndex: int, count: int) =
-        let moveItems list fromIndex toIndex count =
+        let moveItems (list: WidgetNode list) fromIndex toIndex count =
             let itemsToMove = list |> List.skip fromIndex |> List.take count
             let remaining = 
                 list 
@@ -91,11 +105,16 @@ type WidgetTreeApplier(jsonAdapter: WidgetNodeAdapter, root: WidgetNode) =
                 |> List.choose id
             let (before, after) = remaining |> List.splitAt toIndex
             before @ itemsToMove @ after
-        this.Current.Children <- moveItems this.Current.Children fromIndex toIndex count
 
+        updateChildren this.Current (fun children ->
+            moveItems children fromIndex toIndex count
+        )
+
+    // Remove a range of children
     override this.Remove(index: int, count: int) =
-        this.Current.Children <- 
-            this.Current.Children.[0..index - 1] @ this.Current.Children.[index + count..]
+        updateChildren this.Current (fun children ->
+            children.[0..index - 1] @ children.[index + count..]
+        )
 
 
 
@@ -137,14 +156,14 @@ let main argv =
         Id = 1
         Type = "Button"
         Props = new BehaviorSubject<Map<string, obj>>(Map.ofList [("text", box "Click Me")])
-        Children = []
+        Children = new BehaviorSubject<WidgetNode list>([])
     }
 
     let labelWidget = {
         Id = 2
         Type = "Label"
         Props = new BehaviorSubject<Map<string, obj>>(Map.ofList [("text", box "Hello World")])
-        Children = []
+        Children = new BehaviorSubject<WidgetNode list>([])
     }
 
     // Create a node widget with children

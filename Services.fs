@@ -7,7 +7,6 @@ open Externs
 open Types
 
 module WidgetRegistrationService =
-    // Locking mechanisms
     let idGeneratorLock = new ReaderWriterLockSlim()
     let idRegistrationLock = new ReaderWriterLockSlim()
 
