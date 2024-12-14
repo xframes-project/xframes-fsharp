@@ -4,160 +4,14 @@ open System.Threading.Tasks
 open System.Collections.Generic
 open System.Runtime.InteropServices
 open Newtonsoft.Json
+open Widgets
 open Applier
-
-[<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
-extern void resizeWindow(int width, int height)
-
-[<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
-extern void setElement(string elementJson)
-
-[<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
-extern void patchElement(int id, string elementJson)
-
-[<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
-extern void elementInternalOp(int id, string elementJson)
-
-[<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
-extern void setChildren(int id, string childrenIds)
-
-[<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
-extern void appendChild(int parentId, int childId)
-
-[<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
-extern IntPtr getChildren(int id)
-
-[<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
-extern void appendTextToClippedMultiLineTextRenderer(int id, string data)
-
-[<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
-extern IntPtr getStyle()
-
-[<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
-extern void patchStyle(string styleDef)
-
-[<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
-extern void setDebug(bool debug)
-
-[<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
-extern void showDebugWindow()
-
-//// Define a managed function that matches the callback signature
-//let onTextChangedHandler (id: int, value: string) =
-//    printfn "Text changed! ID: %d, Value: %s" id value
-
-//// Create a delegate using Marshal
-//let onTextChangedDelegate = 
-//    Marshal.GetFunctionPointerForDelegate(Action<int, string>(fun id value -> onTextChangedHandler(id, value)))
-
-type OnInitCb = unit -> unit
-//type OnTextChangedCb = int * string -> unit
-type OnComboChangedCb = int * int -> unit
-type OnNumericValueChangedCb = int * float -> unit
-type OnBooleanValueChangedCb = int * bool -> unit
-type OnMultipleNumericValuesChangedCb = int * float[] -> unit
-type OnClickCb = int -> unit
-
-[<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
-extern void init(
-    string assetsBasePath,
-    string rawFontDefinitions,
-    string rawStyleOverrideDefinitions,
-    IntPtr onInit,
-    IntPtr onTextChanged,
-    IntPtr onComboChanged,
-    IntPtr onNumericValueChanged,
-    IntPtr onBooleanValueChanged,
-    IntPtr onMultipleNumericValuesChanged,
-    IntPtr onClick
-)
-
-// Define a non-generic delegate matching the callback signature
-type OnTextChangedCb = delegate of int * string -> unit
+open Externs
+open Theme
+open Types
 
 // Create an instance of the delegate
 let onTextChangedDelegate = OnTextChangedCb(fun id value -> printfn "Text changed: %d, %s" id value)
-
-
-
-type ImGuiCol =
-    | Text = 0
-    | TextDisabled = 1
-    | WindowBg = 2
-    | ChildBg = 3
-    | PopupBg = 4
-    | Border = 5
-    | BorderShadow = 6
-    | FrameBg = 7
-    | FrameBgHovered = 8
-    | FrameBgActive = 9
-    | TitleBg = 10
-    | TitleBgActive = 11
-    | TitleBgCollapsed = 12
-    | MenuBarBg = 13
-    | ScrollbarBg = 14
-    | ScrollbarGrab = 15
-    | ScrollbarGrabHovered = 16
-    | ScrollbarGrabActive = 17
-    | CheckMark = 18
-    | SliderGrab = 19
-    | SliderGrabActive = 20
-    | Button = 21
-    | ButtonHovered = 22
-    | ButtonActive = 23
-    | Header = 24
-    | HeaderHovered = 25
-    | HeaderActive = 26
-    | Separator = 27
-    | SeparatorHovered = 28
-    | SeparatorActive = 29
-    | ResizeGrip = 30
-    | ResizeGripHovered = 31
-    | ResizeGripActive = 32
-    | Tab = 33
-    | TabHovered = 34
-    | TabActive = 35
-    | TabUnfocused = 36
-    | TabUnfocusedActive = 37
-    | PlotLines = 38
-    | PlotLinesHovered = 39
-    | PlotHistogram = 40
-    | PlotHistogramHovered = 41
-    | TableHeaderBg = 42
-    | TableBorderStrong = 43
-    | TableBorderLight = 44
-    | TableRowBg = 45
-    | TableRowBgAlt = 46
-    | TextSelectedBg = 47
-    | DragDropTarget = 48
-    | NavHighlight = 49
-    | NavWindowingHighlight = 50
-    | NavWindowingDimBg = 51
-    | ModalWindowDimBg = 52
-    | COUNT = 53
-
-
-let createColorDef (hex: string) (opacity: float) : obj list = 
-    [hex; opacity]
-
-
-type Theme2(colorsDict: Dictionary<int, List<obj>>) =
-    member val colors = colorsDict with get, set
-
-
-type FontDef = {
-    name: string
-    size: int
-}
-
-type WidgetNode = {
-    Id: int
-    Type: string
-    mutable Props: Map<string, obj>
-    mutable Children: WidgetNode list
-}
-
-
 
 // Record types for data structures
 type JsonSetData = { Op: string; Data: obj }
@@ -173,89 +27,6 @@ type SetData = {
     op: string
     data: List<obj>
 }
-
-module WidgetRegistrationService =
-    // Locking mechanisms
-    let idGeneratorLock = new ReaderWriterLockSlim()
-    let idRegistrationLock = new ReaderWriterLockSlim()
-
-    // Widget registry
-    let widgetRegistry = new Dictionary<int, WidgetNode>()
-    let onClickRegistry = new Dictionary<int, unit -> unit>()
-
-    // Widget ID management
-    let mutable lastWidgetId = 0
-
-    let getWidgetById (id: int) =
-        // Return widget from registry by ID
-        if widgetRegistry.ContainsKey(id) then Some(widgetRegistry.[id]) else None
-
-    let registerWidget (id: int) (widget: WidgetNode) =
-        idRegistrationLock.EnterWriteLock()
-        try
-            widgetRegistry.[id] <- widget
-        finally
-            idRegistrationLock.ExitWriteLock()
-
-    let getNextWidgetId () =
-        idGeneratorLock.EnterWriteLock()
-        try
-            let id = lastWidgetId
-            lastWidgetId <- lastWidgetId + 1
-            id
-        finally
-            idGeneratorLock.ExitWriteLock()
-
-    let registerWidgetForOnClickEvent (id: int) (fn: unit -> unit) =
-        onClickRegistry.[id] <- fn
-
-    let dispatchOnClickEvent (id: int) =
-        if onClickRegistry.ContainsKey(id) then onClickRegistry.[id] ()
-
-    let getStyle () =
-        // Assuming `xFramesWrapper` has a method `getStyle()`
-        // Placeholder for style retrieval
-        ""
-
-    let setData (id: int) (data: List<obj>) =
-        //let opDictionary = SetData
-        //opDictionary.Add("")
-        elementInternalOp(id, JsonConvert.SerializeObject(""))
-
-    let appendData (id: int) (data: List<obj>) =
-        //let jsonData = JsonAppendData(Op = "appendData", Data = data)
-        elementInternalOp(id, JsonConvert.SerializeObject(""))
-
-    let resetData (id: int) =
-        //let jsonData = JsonResetData(Op = "resetData")
-        elementInternalOp(id, JsonConvert.SerializeObject(""))
-
-    let appendDataToPlotLine (id: int) (x: float) (y: float) =
-        //let jsonData = JsonAppendDataToPlotLine(Op = "appendData", X = x, Y = y)
-        elementInternalOp(id, JsonConvert.SerializeObject(""))
-
-    let setPlotLineAxesDecimalDigits (id: int) (x: float) (y: float) =
-        //let jsonData = JsonSetAxesDecimalDigits(Op = "setAxesDecimalDigits", X = x, Y = y)
-        elementInternalOp(id, JsonConvert.SerializeObject(""))
-
-    let setAxisAutoFitEnabled (id: int) (enabled: bool) =
-        //let jsonData = JsonSetAxesAutoFit(Op = "setAxesAutoFit", Enabled = enabled)
-        elementInternalOp(id, JsonConvert.SerializeObject(""))
-
-    let appendTextToClippedMultiLineTextRenderer (id: int) (text: string) =
-        appendTextToClippedMultiLineTextRenderer(id, text)
-
-    let setInputTextValue (id: int) (value: string) =
-        //let jsonData = JsonSetValue(Op = "setValue", Value = value)
-        elementInternalOp(id, JsonConvert.SerializeObject(""))
-
-    let setComboSelectedIndex (id: int) (index: int) =
-        //let jsonData = JsonSetSelectedIndex(Op = "setSelectedIndex", Index = index)
-        elementInternalOp(id, JsonConvert.SerializeObject(""))
-
-
-
-
 
 
 type WidgetNodeAdapter() =
@@ -273,14 +44,6 @@ type WidgetNodeAdapter() =
         |> Map.add "id" (box widgetNode.Id)
         |> Map.add "type" (box widgetNode.Type)
 
-
-let createNode id type' props children =
-    {
-        Id = id
-        Type = type'
-        Props = props
-        Children = children
-    }
 
 type WidgetTreeApplier(jsonAdapter: WidgetNodeAdapter, root: WidgetNode) =
     inherit AbstractApplier<WidgetNode>(root)
@@ -331,81 +94,6 @@ let fontDefs =
 let fontsDictionary = new Dictionary<string, FontDef list>()
 fontsDictionary.Add("defs", fontDefs)
 
-let fontDefsJson = JsonConvert.SerializeObject(fontsDictionary)
-
-    
-let theme2Colors = 
-    [
-        "white", "#FFFFFF"
-        "lighterGrey", "#B0B0B0"
-        "black", "#000000"
-        "lightGrey", "#A0A0A0"
-        "darkestGrey", "#1A1A1A"
-        "darkerGrey", "#505050"
-        "darkGrey", "#2E2E2E"
-    ] |> Map.ofList
-
-let colorsDict = 
-    let dict = new Dictionary<int, obj list>()
-    
-    dict.Add(int ImGuiCol.Text, [theme2Colors.["white"]; 1])
-    dict.Add(int ImGuiCol.TextDisabled, [theme2Colors.["lighterGrey"]; 1])
-    dict.Add(int ImGuiCol.WindowBg, [theme2Colors.["black"]; 1])
-    dict.Add(int ImGuiCol.ChildBg, [theme2Colors.["black"]; 1])
-    dict.Add(int ImGuiCol.PopupBg, [theme2Colors.["white"]; 1])
-    dict.Add(int ImGuiCol.Border, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.BorderShadow, [theme2Colors.["darkestGrey"]; 1])
-    dict.Add(int ImGuiCol.FrameBg, [theme2Colors.["black"]; 1])
-    dict.Add(int ImGuiCol.FrameBgHovered, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.FrameBgActive, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.TitleBg, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.TitleBgActive, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.TitleBgCollapsed, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.MenuBarBg, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.ScrollbarBg, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.ScrollbarGrab, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.ScrollbarGrabHovered, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.ScrollbarGrabActive, [theme2Colors.["darkestGrey"]; 1])
-    dict.Add(int ImGuiCol.CheckMark, [theme2Colors.["darkestGrey"]; 1])
-    dict.Add(int ImGuiCol.SliderGrab, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.SliderGrabActive, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.Button, [theme2Colors.["black"]; 1])
-    dict.Add(int ImGuiCol.ButtonHovered, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.ButtonActive, [theme2Colors.["black"]; 1])
-    dict.Add(int ImGuiCol.Header, [theme2Colors.["black"]; 1])
-    dict.Add(int ImGuiCol.HeaderHovered, [theme2Colors.["black"]; 1])
-    dict.Add(int ImGuiCol.HeaderActive, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.Separator, [theme2Colors.["darkestGrey"]; 1])
-    dict.Add(int ImGuiCol.SeparatorHovered, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.SeparatorActive, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.ResizeGrip, [theme2Colors.["black"]; 1])
-    dict.Add(int ImGuiCol.ResizeGripHovered, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.ResizeGripActive, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.Tab, [theme2Colors.["black"]; 1])
-    dict.Add(int ImGuiCol.TabHovered, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.TabActive, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.TabUnfocused, [theme2Colors.["black"]; 1])
-    dict.Add(int ImGuiCol.TabUnfocusedActive, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.PlotLines, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.PlotLinesHovered, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.PlotHistogram, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.PlotHistogramHovered, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.TableHeaderBg, [theme2Colors.["black"]; 1])
-    dict.Add(int ImGuiCol.TableBorderStrong, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.TableBorderLight, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.TableRowBg, [theme2Colors.["darkGrey"]; 1])
-    dict.Add(int ImGuiCol.TableRowBgAlt, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.TextSelectedBg, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.DragDropTarget, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.NavHighlight, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.NavWindowingHighlight, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.NavWindowingDimBg, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.ModalWindowDimBg, [theme2Colors.["darkerGrey"]; 1])
-    
-    dict
-
-
-let themeJson = JsonConvert.SerializeObject(colorsDict)
 
 let rec keepProcessRunning () =
     async {
@@ -488,10 +176,14 @@ let main argv =
     let onMultipleNumericValuesChanged = Marshal.GetFunctionPointerForDelegate(Action(fun () -> printfn "Initialization callback called!"))
     let onClick = Marshal.GetFunctionPointerForDelegate(Action(fun () -> printfn "Initialization callback called!"))
 
+    let fontDefsJson = JsonConvert.SerializeObject(fontsDictionary)
+    let themeJson = JsonConvert.SerializeObject(colorsDict)
+
+
     init(assetsPath, fontDefsJson, themeJson, onInit, onTextChangedPtr, onComboChanged, onNumericValueChanged, onBooleanValueChanged, onMultipleNumericValuesChanged, onClick)
 
-    let process = keepProcessRunning ()
-    Async.Start process
+    let appProcess = keepProcessRunning ()
+    Async.Start appProcess
     
     // Prevent the app from terminating by waiting indefinitely
     Console.ReadLine() |> ignore

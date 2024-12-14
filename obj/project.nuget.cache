@@ -1,12 +1,13 @@
 {
   "version": 2,
-  "dgSpecHash": "JzwQGalh5F0=",
+  "dgSpecHash": "nMnAYrWQZQE=",
   "success": true,
   "projectFilePath": "C:\\dev\\xframes-fsharp\\xframes.fsproj",
   "expectedPackageFiles": [
     "C:\\Users\\manes\\.nuget\\packages\\fsharp.core\\9.0.100\\fsharp.core.9.0.100.nupkg.sha512",
     "C:\\Users\\manes\\.nuget\\packages\\fsharpplus\\1.7.0\\fsharpplus.1.7.0.nupkg.sha512",
-    "C:\\Users\\manes\\.nuget\\packages\\newtonsoft.json\\13.0.3\\newtonsoft.json.13.0.3.nupkg.sha512"
+    "C:\\Users\\manes\\.nuget\\packages\\newtonsoft.json\\13.0.3\\newtonsoft.json.13.0.3.nupkg.sha512",
+    "C:\\Users\\manes\\.nuget\\packages\\system.reactive\\6.0.1\\system.reactive.6.0.1.nupkg.sha512"
   ],
   "logs": []
 }
