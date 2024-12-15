@@ -11,19 +11,19 @@ module WidgetRegistrationService =
     let idRegistrationLock = new ReaderWriterLockSlim()
 
     // Widget registry
-    let widgetRegistry = new Dictionary<int, WidgetNode>()
+    let widgetRegistry = new Dictionary<int, RawWidgetNodeWithId>()
     //let onClickRegistry = new Dictionary<int, unit -> unit>()
 
     let onClickRegistry = new BehaviorSubject<Map<int, unit -> unit>>(Map.empty)
 
     // Widget ID management
-    let mutable lastWidgetId = 0
+    let mutable lastWidgetId = 1
 
     let getWidgetById (id: int) =
         // Return widget from registry by ID
         if widgetRegistry.ContainsKey(id) then Some(widgetRegistry.[id]) else None
 
-    let registerWidget (id: int) (widget: WidgetNode) =
+    let registerWidget (id: int, widget: RawWidgetNodeWithId) =
         idRegistrationLock.EnterWriteLock()
         try
             widgetRegistry.[id] <- widget
@@ -39,12 +39,14 @@ module WidgetRegistrationService =
         finally
             idGeneratorLock.ExitWriteLock()
 
-    let registerWidgetForOnClickEvent id fn =
+    let registerWidgetForOnClickEvent(id: int, fn: (unit -> unit)) =
         onClickRegistry.OnNext(onClickRegistry.Value.Add(id, fn))
 
     let dispatchOnClickEvent id =
         match onClickRegistry.Value.TryFind id with
-        | Some fn -> fn()
+        | Some fn -> 
+            printfn "About to invoke onClick fn for widget %d" id
+            fn()
         | None -> printfn "No event handler for ID %d" id
 
     let getStyle () =

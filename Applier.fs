@@ -1,6 +1,7 @@
 ﻿module Applier
 
 open System.Collections.Generic
+open Types
 
 type IApplier<'T> =
     abstract Current: 'T
@@ -27,8 +28,8 @@ type AbstractApplier<'T>(root: 'T) =
         with get() = current
         and set(value) = current <- value
 
-    abstract member InsertTopDown: index: int * instance: 'T -> unit
-    abstract member InsertBottomUp: index: int * instance: 'T -> unit
+    abstract member InsertTopDown: index: int * instance: RawWidgetNode -> unit
+    abstract member InsertBottomUp: index: int * instance: RawWidgetNode -> unit
     abstract member Remove: index: int * count: int -> unit
     abstract member Move: fromIndex: int * toIndex: int * count: int -> unit
     abstract member OnClear: unit -> unit

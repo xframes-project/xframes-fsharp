@@ -11,9 +11,9 @@ open Applier
 open Externs
 open Theme
 open Types
+open Services
 
-// Create an instance of the delegate
-let onTextChangedDelegate = OnTextChangedCb(fun id value -> printfn "Text changed: %d, %s" id value)
+
 
 // Record types for data structures
 type JsonSetData = { Op: string; Data: obj }
@@ -43,16 +43,16 @@ type WidgetNodeAdapter() =
 
         // Initialize WidgetNode with reactive Props
         {
-            Id = id
+            //Id = id
             Type = ``type``
             Props = new BehaviorSubject<Map<string, obj>>(props)
             Children = new BehaviorSubject<WidgetNode list>([]) // Modify if children are part of the JSON
         }
 
     /// Converts a WidgetNode to a JSON-like Map<string, obj>
-    member this.ToJson(widgetNode: WidgetNode) =
+    member this.ToJson(widgetNode: RawWidgetNodeWithId) =
         // Extract Props' current value
-        let props = widgetNode.Props.Value
+        let props = widgetNode.Props
 
         // Add `id` and `type` to Props for JSON representation
         props
@@ -60,8 +60,8 @@ type WidgetNodeAdapter() =
         |> Map.add "type" (box widgetNode.Type)
 
 
-type WidgetTreeApplier(jsonAdapter: WidgetNodeAdapter, root: WidgetNode) =
-    inherit AbstractApplier<WidgetNode>(root)
+type WidgetTreeApplier(jsonAdapter: WidgetNodeAdapter, root: RawWidgetNodeWithId) =
+    inherit AbstractApplier<RawWidgetNodeWithId>(root)
 
     // Helper functions for serialization and deserialization
     let serializeToJson (data: obj) = JsonConvert.SerializeObject(data)
@@ -75,26 +75,38 @@ type WidgetTreeApplier(jsonAdapter: WidgetNodeAdapter, root: WidgetNode) =
 
     // Clear all children of the root
     override this.OnClear() =
-        root.Children.OnNext([])
+        root.Children <- []
 
     // Insert a node bottom-up (logic can be customized)
-    override this.InsertBottomUp(index: int, instance: WidgetNode) =
-        updateChildren this.Current (fun children ->
-            children.[0..index - 1] @ [instance] @ children.[index..]
-        )
+    override this.InsertBottomUp(index: int, instance: RawWidgetNode) =
+        ignore()
 
     // Insert a node top-down
-    override this.InsertTopDown(index: int, instance: WidgetNode) =
-        updateChildren this.Current (fun children ->
-            children.[0..index - 1] @ [instance] @ children.[index..]
-        )
+    override this.InsertTopDown(index: int, instance: RawWidgetNode) =
+        let widgetWithId = createRawWidgetNodeWithIdFromRawWidgetNodeWithoutId(instance)
+
+        WidgetRegistrationService.registerWidget(widgetWithId.Id, widgetWithId)
+
+        match widgetWithId.Props.TryFind("onClick") with
+        | Some value ->
+            match value with
+            | :? (unit -> unit) as onClickFn -> WidgetRegistrationService.registerWidgetForOnClickEvent(widgetWithId.Id, onClickFn)
+            | _ -> ignore()
+        | None -> ignore()
         
-        let json = jsonAdapter.ToJson(instance)
+        let json = jsonAdapter.ToJson(widgetWithId)
         let jsonString = serializeToJson json
+
+        printfn "%s" jsonString
+
         setElement(jsonString)
 
-        let childrenJson = serializeToJson [ instance.Id ]
+        let childrenJson = serializeToJson [ widgetWithId.Id ]
         setChildren(this.Current.Id, childrenJson)
+
+        this.Root.Children <- this.Root.Children @ [widgetWithId]
+
+        ignore()
 
     // Move nodes within the current node's children
     override this.Move(fromIndex: int, toIndex: int, count: int) =
@@ -107,15 +119,17 @@ type WidgetTreeApplier(jsonAdapter: WidgetNodeAdapter, root: WidgetNode) =
             let (before, after) = remaining |> List.splitAt toIndex
             before @ itemsToMove @ after
 
-        updateChildren this.Current (fun children ->
-            moveItems children fromIndex toIndex count
-        )
+        //updateChildren this.Current (fun children ->
+        //    moveItems children fromIndex toIndex count
+        //)
+        ignore()
 
     // Remove a range of children
     override this.Remove(index: int, count: int) =
-        updateChildren this.Current (fun children ->
-            children.[0..index - 1] @ children.[index + count..]
-        )
+        ignore()
+        //updateChildren this.Current (fun children ->
+        //    children.[0..index - 1] @ children.[index + count..]
+        //)
 
 
 
@@ -141,107 +155,193 @@ let rec keepProcessRunning () =
             do! Task.Delay(1000) |> Async.AwaitTask
     }
 
+// Create an instance of the delegate
+let onTextChangedDelegate = OnTextChangedCb(fun id value -> printfn "Text changed: %d, %s" id value)
+
+// Create an instance of the delegate
+let OnClickDelegate = OnClickCb(fun id -> WidgetRegistrationService.dispatchOnClickEvent(id))
+
 [<EntryPoint>]
 let main argv =
 
-    let appState = new BehaviorSubject<AppState>({ Text = "Hello, world" })
+    let rootNodeWithId = createRawWidgetNodeWithId(0, "node", Map.ofList [("root", box true)], [])
+    let rootNode = createRawWidgetNode("node", Map.ofList [("root", box true)], [])
+
+    let appState = new BehaviorSubject<AppState>({ Text = "Hello, world"; Count = 1 })
 
     let app () =
         let onClick = Some(fun () ->
-            appState.OnNext({ Text = "Button clicked!" })
+            appState.OnNext({ Text = "Button clicked!"; Count = appState.Value.Count + 1 })
         )
 
-        node [
+        makeRootNode [
             unformattedText (appState.Value.Text)
-            button "Click me!" onClick
+            button(appState.Value.Text, onClick)
         ]
 
+            
+
     let runApp () =
-        let mutable oldTree = app
+        let mutable oldTree = rootNode
+
+        let applier = WidgetTreeApplier(WidgetNodeAdapter(), rootNodeWithId)
 
         // Function to apply changes
         let applyChanges (changes: Diff option) =
             match changes with
             | Some (Value(x1, x2)) ->
-                // Handle leaf value differences, e.g., text content
                 printfn "Value difference detected: %A -> %A" x1 x2
-                // Update the widget content here
 
             | Some (Nullness(x1, x2)) ->
-                // Handle nullness differences (null vs. non-null)
                 printfn "Nullness difference detected: %A -> %A" x1 x2
-                // Handle the widget addition/removal here
 
             | Some (Record fields) ->
-                // Handle record differences (widget fields differ)
                 printfn "Record difference detected, fields: %A" fields
-                // Update the widget fields accordingly
+
+                for i = 0 to fields.Count - 1 do
+                    match fields.Item(i).Name with
+                    | "Props" -> 
+                        printfn "Props are different!"
+                    | "Children" -> 
+                        printfn "Children are different!"
+                        //let changes = Differ.Diff(oldTree.Children, normalizedNewTree)
+                        ignore()
+                    | _ -> printfn "Unrecognized Name in Field"
 
             | Some (UnionCase(caseName1, caseName2)) ->
-                // Handle union case differences (different union cases)
                 printfn "Union case difference detected: %s -> %s" caseName1 caseName2
-                // Replace the widget or update accordingly
 
             | Some (UnionField(case, fields)) ->
-                // Handle field differences within the same union case
                 printfn "Union field difference detected for case %s, fields: %A" case fields
-                // Update the widget fields here
 
             | Some (Collection(count1, count2, items)) ->
-                // Handle collection differences (lengths or items differ)
                 printfn "Collection difference detected: %d -> %d, items: %A" count1 count2 items
-                // Update child widgets accordingly
+
+                for i = 0 to items.Count - 1  do
+                    //applier.InsertTopDown(i, items.Item(i))
+                    printfn "item: %A" (items.Item(i))
 
             | Some (Dictionary(keysInX1, keysInX2, common)) ->
-                // Handle dictionary differences (keys or values differ)
                 printfn "Dictionary difference detected, keys in X1: %A, keys in X2: %A" keysInX1 keysInX2
-                // Update the widget properties accordingly
 
             | Some (Custom customDiff) ->
-                // Handle custom diffing logic
                 printfn "Custom diff detected: %A" customDiff
-                // Apply custom diff logic here
 
             | None ->
-                // No changes detected
                 printfn "No changes detected"
 
-        // Subscribe to state changes
-        appState.Subscribe(fun _ ->
-            let newTree = app
-            let changes = Differ.Diff(oldTree, newTree) // Calculate the diff
-            applyChanges changes // Apply the changes to your UI
-            oldTree <- newTree // Update the old tree
+        appState.Subscribe(fun state ->
+            printfn "%A" state
+
+            let currentTree = app()
+            let normalizedOldTree = normalizeRawWidgetNodeWithIdTree applier.Root
+            let normalizedNewTree = normalizeWidgetNodeTree currentTree
+
+            printfn "Old tree: %A" normalizedOldTree
+            printfn "New tree: %A" normalizedNewTree
+
+            // Compute the differences
+            //let changes = Differ.Diff(normalizedOldTree, normalizedNewTree)
+
+            let changes = diffNodes(normalizedOldTree, normalizedNewTree)
+
+            match changes with
+            | Some (Value(x1, x2)) ->
+                printfn "Value difference detected: %A -> %A" x1 x2
+
+            | Some (Nullness(x1, x2)) ->
+                printfn "Nullness difference detected: %A -> %A" x1 x2
+
+            | Some (Record fields) ->
+                //printfn "Record difference detected, fields: %A" fields
+
+                for field in fields do
+                    match field.Name with
+                    | "Props" -> 
+                        printfn "Props are different!"
+
+                    | "Children" -> 
+                        printfn "Children are different!"
+                        // Here you could apply your props diff handling logic
+
+
+                        //// Assuming normalizedNewTree.Children and normalizedOldTree.Children
+                        //let changes = diffNodes (normalizedOldTree.Children, normalizedNewTree.Children)
+                        printfn "Children difference detected: %A" field.Diff
+
+                        match field.Diff with
+                        | Collection(_, _, items) ->
+                            for i = 0 to items.Count - 1 do
+                                let child = items.Item(i)
+        
+                                match child.Diff with
+                                | Value(x1, x2) ->
+                                    match x1, x2 with
+                                    | null, RawWidgetNode -> 
+                                        // Directly cast x2 to RawWidgetNode and insert
+                                        applier.InsertTopDown(i, x2 :?> RawWidgetNode)
+                                        printfn "Child added"
+                                    | RawWidgetNode, null -> 
+                                        // Handle child removal (x1 is a RawWidgetNode)
+                                        printfn "Child removed"
+                                    | _ -> 
+                                        // Handle other situations if needed
+                                        printfn "Other Value diff case"
+                                | _ -> 
+                                    // Handle other types of diffs, e.g., Nullness, Record, etc.
+                                    printfn "Other diff type detected for child"
+
+                            ignore() // Optional if ignoring the return value
+
+
+                        //// Apply changes to the children using InsertTopDown
+                        //match changes with
+                        //| Some (Collection(_, _, items)) -> 
+                        //    for i = 0 to items.Count - 1 do
+                        //        let child = items.Item(i)
+                        //        printfn "Inserting child: %A" child
+                        //        applier.InsertTopDown(i, child)
+                        //| _ -> printfn "Unexpected changes in children"
+
+                    | name when name.StartsWith("Child") ->
+                        printfn "Child node difference detected: %s" name
+                        // Here, you can handle the diff of child nodes
+
+                    | unreco -> printfn "Unrecognized Name in Field: %s" unreco
+
+            | Some (UnionCase(caseName1, caseName2)) ->
+                printfn "Union case difference detected: %s -> %s" caseName1 caseName2
+
+            | Some (UnionField(case, fields)) ->
+                printfn "Union field difference detected for case %s, fields: %A" case fields
+
+            | Some (Collection(count1, count2, items)) ->
+                printfn "Collection difference detected: %d -> %d, items: %A" count1 count2 items
+
+                for i = 0 to items.Count - 1 do
+                    // Assuming you want to apply changes to each collection item
+                    printfn "Item: %A" (items.Item(i))
+
+            | Some (Dictionary(keysInX1, keysInX2, common)) ->
+                printfn "Dictionary difference detected, keys in X1: %A, keys in X2: %A" keysInX1 keysInX2
+
+            | Some (Custom customDiff) ->
+                printfn "Custom diff detected: %A" customDiff
+
+            | None ->
+                printfn "No changes detected"
+
+            // Apply the changes using the WidgetTreeApplier
+            //applyChanges changes
+
+            // Update the old tree reference
+            oldTree <- normalizedNewTree
         ) |> ignore
 
-        // Initial render
-        oldTree
+        ignore
 
-    runApp
     
-    // Define individual widget nodes
-    let buttonWidget = {
-        Id = 1
-        Type = "Button"
-        Props = new BehaviorSubject<Map<string, obj>>(Map.ofList [("text", box "Click Me")])
-        Children = new BehaviorSubject<WidgetNode list>([])
-    }
-
-    let labelWidget = {
-        Id = 2
-        Type = "Label"
-        Props = new BehaviorSubject<Map<string, obj>>(Map.ofList [("text", box "Hello World")])
-        Children = new BehaviorSubject<WidgetNode list>([])
-    }
-
-    // Create a node widget with children
-    let nodeWidget = 
-        createWidgetNode 
-            3 
-            "Node" 
-            (Map.ofList [("style", box "vertical")]) 
-            [buttonWidget; labelWidget]
-
+    
 
     //printfn "%s" fontDefsJson
 
@@ -250,7 +350,6 @@ let main argv =
 
     // Function that will contain the logic for initializing nodes
     let onInitLogic () =
-        // Root node definition
         let rootNode = 
             let dict = new Dictionary<string, obj>()
             dict.Add("id", 0 :> obj)
@@ -258,37 +357,30 @@ let main argv =
             dict.Add("root", true :> obj)
             dict
 
-        // Text node definition
-        let textNode = 
-            let dict = new Dictionary<string, obj>()
-            dict.Add("id", 1 :> obj)
-            dict.Add("type", "unformatted-text" :> obj)
-            dict.Add("text", "Hello, world!" :> obj)
-            dict
-
-        // Serialize and set the elements
         setElement (JsonConvert.SerializeObject(rootNode))
-        setElement (JsonConvert.SerializeObject(textNode))
 
-        // Serialize and set the children
-        setChildren (0, JsonConvert.SerializeObject([1]))
-    
+        runApp()
+
+        ignore()
+
 
     let onInit = Marshal.GetFunctionPointerForDelegate(Action(fun () -> onInitLogic()))
+    //let onInit = Marshal.GetFunctionPointerForDelegate(Action(fun () -> ignore()))
     
     let onTextChangedPtr = Marshal.GetFunctionPointerForDelegate(onTextChangedDelegate)
+    let OnClickPtr = Marshal.GetFunctionPointerForDelegate(OnClickDelegate)
 
     let onComboChanged = Marshal.GetFunctionPointerForDelegate(Action(fun () -> printfn "Initialization callback called!"))
     let onNumericValueChanged = Marshal.GetFunctionPointerForDelegate(Action(fun () -> printfn "Initialization callback called!"))
     let onBooleanValueChanged = Marshal.GetFunctionPointerForDelegate(Action(fun () -> printfn "Initialization callback called!"))
     let onMultipleNumericValuesChanged = Marshal.GetFunctionPointerForDelegate(Action(fun () -> printfn "Initialization callback called!"))
-    let onClick = Marshal.GetFunctionPointerForDelegate(Action(fun () -> printfn "Initialization callback called!"))
+    //let onClick = Marshal.GetFunctionPointerForDelegate(Action<int>(fun (id: int) -> onClickLogic(id)))
 
     let fontDefsJson = JsonConvert.SerializeObject(fontsDictionary)
     let themeJson = JsonConvert.SerializeObject(colorsDict)
 
 
-    init(assetsPath, fontDefsJson, themeJson, onInit, onTextChangedPtr, onComboChanged, onNumericValueChanged, onBooleanValueChanged, onMultipleNumericValuesChanged, onClick)
+    init(assetsPath, fontDefsJson, themeJson, onInit, onTextChangedPtr, onComboChanged, onNumericValueChanged, onBooleanValueChanged, onMultipleNumericValuesChanged, OnClickPtr)
 
     let appProcess = keepProcessRunning ()
     Async.Start appProcess

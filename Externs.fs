@@ -48,12 +48,12 @@ extern void showDebugWindow()
 //    Marshal.GetFunctionPointerForDelegate(Action<int, string>(fun id value -> onTextChangedHandler(id, value)))
 
 type OnInitCb = unit -> unit
-//type OnTextChangedCb = int * string -> unit
+type OnTextChangedCb = delegate of int * string -> unit
 type OnComboChangedCb = int * int -> unit
 type OnNumericValueChangedCb = int * float -> unit
 type OnBooleanValueChangedCb = int * bool -> unit
 type OnMultipleNumericValuesChangedCb = int * float[] -> unit
-type OnClickCb = int -> unit
+type OnClickCb = delegate of int -> unit
 
 [<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
 extern void init(
@@ -70,4 +70,3 @@ extern void init(
 )
 
 // Define a non-generic delegate matching the callback signature
-type OnTextChangedCb = delegate of int * string -> unit

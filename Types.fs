@@ -3,8 +3,20 @@
 open System.Collections.Generic
 open System.Reactive.Subjects
 
-type WidgetNode = {
+type RawWidgetNode = {
+    Type: string
+    Props: Map<string, obj>
+    mutable Children: RawWidgetNode list
+}
+
+type RawWidgetNodeWithId = {
     Id: int
+    Type: string
+    Props: Map<string, obj>
+    mutable Children: RawWidgetNodeWithId list
+}
+
+type WidgetNode = {
     Type: string
     Props: BehaviorSubject<Map<string, obj>>
     Children: BehaviorSubject<WidgetNode list>
@@ -21,4 +33,5 @@ type FontDef = {
 
 type AppState = {
     Text: string
+    Count: int
 }
