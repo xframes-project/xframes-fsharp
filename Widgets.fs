@@ -1,5 +1,7 @@
 ﻿module Widgets
 
+open System
+open System.Reactive.Linq
 open System.Reactive.Subjects
 open Types
 open Services
@@ -150,3 +152,98 @@ and diffChildren (children1: RawWidgetNode list, children2: RawWidgetNode list) 
         None
     else
         Some(Diff.Collection(count1, count2, itemDiffs))
+
+type BaseComponent<'T>() =
+    let defaultProps = new BehaviorSubject<'T>(Unchecked.defaultof<'T>)
+    interface IComponent<'T> with
+        member this.Props = defaultProps
+        member this.Render() =
+            // Abstract method to be overridden
+            failwith "Render method must be implemented"
+
+type Inner() =
+    inherit BaseComponent<Map<string, obj>>()
+    interface IComponent<Map<string, obj>> with
+        member this.Render() =
+            WidgetNode (
+                node [
+                    unformattedText "hello"
+                ]
+            )
+
+type App() =
+    inherit BaseComponent<Map<string, obj>>()
+    interface IComponent<Map<string, obj>> with
+        member this.Render() =
+            Component(Inner())
+
+type ShadowNodeManager() =
+    // Store subscriptions for props and children
+    let subscriptions = new System.Collections.Generic.Dictionary<obj, IDisposable>()
+
+    // Function to subscribe to a BehaviorSubject and handle reactivity
+    member this.SubscribeToBehaviorSubject<'T>(subject: BehaviorSubject<'T>, onNext: 'T -> unit) =
+        // If already subscribed, don't subscribe again
+        if not (subscriptions.ContainsKey(subject)) then
+            // Skip very first observable as the component would have just been rendered
+            let subscription = subject.Skip(1).Subscribe(onNext)
+            subscriptions.Add(subject, subscription)
+    
+    // Function to unsubscribe from a BehaviorSubject
+    member this.UnsubscribeFromBehaviorSubject(subject: obj) =
+        // Try to get the subscription associated with the subject
+        match subscriptions.TryGetValue(subject) with
+        | true, subscription ->
+            // Dispose of the subscription if found
+            subscription.Dispose()
+            // Remove the subject from the dictionary
+            subscriptions.Remove(subject) |> ignore
+        | _ -> 
+            printfn "No subscription found for the provided subject"
+
+let shadowNodeManager = ShadowNodeManager()
+
+let rec traverseTree<'T>(root: Renderable<'T>): ShadowNode * int =
+    match root with
+    | Component component ->
+        // Extract props and children for the component
+        let props = Map.empty // Placeholder for actual props (e.g., from component)
+        let child = component.Render()
+
+        // Subscribe to changes in the component's props
+        shadowNodeManager.SubscribeToBehaviorSubject(component.Props, fun _ ->
+            printfn "Component Props or Children changed, re-rendering..."
+            // Trigger re-render for this specific component
+        )
+
+        // Recursively traverse the child
+        let shadowChild, nextId = traverseTree child
+        ShadowComponent(WidgetRegistrationService.getNextWidgetId(), "Component", props, [shadowChild]), nextId
+
+    | WidgetNode widgetNode ->
+        // Extract children and props for the WidgetNode
+        let children = widgetNode.Children.Value
+        let props = widgetNode.Props.Value
+
+        // Subscribe to changes in props and children
+        shadowNodeManager.SubscribeToBehaviorSubject(widgetNode.Props, fun newProps ->
+            printfn "WidgetProps for %s changed: %A" widgetNode.Type newProps
+            // Trigger re-render for this specific widget node
+        )
+
+        shadowNodeManager.SubscribeToBehaviorSubject(widgetNode.Children, fun newChildren ->
+            printfn "WidgetChildren for %s changed: %A" widgetNode.Type newChildren
+            // Trigger re-render or other update logic here
+        )
+
+        // Recursively process children
+        let shadowChildren, nextId =
+            children |> List.fold (fun (acc, id) child ->
+                let shadowChild, newId = traverseTree (WidgetNode child)
+                (shadowChild :: acc, newId)
+            ) ([], WidgetRegistrationService.getNextWidgetId())
+
+        ShadowWidget(WidgetRegistrationService.getNextWidgetId(), widgetNode.Type, props, List.rev shadowChildren), nextId
+
+
+

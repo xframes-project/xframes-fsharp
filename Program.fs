@@ -287,6 +287,15 @@ let main argv =
                                     | _ -> 
                                         // Handle other situations if needed
                                         printfn "Other Value diff case"
+                                | Record fields ->
+                                    //printfn "Fields difference detected: %A" fields
+                                    for i = 0 to fields.Count - 1 do
+                                        let field = fields.Item(i)
+                                        printfn "Field difference detected: %A" field
+
+
+
+                                    ignore()
                                 | _ -> 
                                     // Handle other types of diffs, e.g., Nullness, Record, etc.
                                     printfn "Other diff type detected for child"
@@ -359,7 +368,11 @@ let main argv =
 
         setElement (JsonConvert.SerializeObject(rootNode))
 
-        runApp()
+        //runApp()
+
+        let shadowTree = traverseTree (Component (App()))
+
+        printfn "shadowTree: %A" shadowTree
 
         ignore()
 
