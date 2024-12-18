@@ -17,7 +17,9 @@ module WidgetRegistrationService =
     let onClickRegistry = new BehaviorSubject<Map<int, unit -> unit>>(Map.empty)
 
     // Widget ID management
-    let mutable lastWidgetId = 1
+    let mutable lastWidgetId = 0
+
+    let mutable lastComponentId = 0
 
     let getWidgetById (id: int) =
         // Return widget from registry by ID
@@ -35,6 +37,15 @@ module WidgetRegistrationService =
         try
             let id = lastWidgetId
             lastWidgetId <- lastWidgetId + 1
+            id
+        finally
+            idGeneratorLock.ExitWriteLock()
+
+    let getNextComponentId () =
+        idGeneratorLock.EnterWriteLock()
+        try
+            let id = lastComponentId
+            lastComponentId <- lastComponentId + 1
             id
         finally
             idGeneratorLock.ExitWriteLock()

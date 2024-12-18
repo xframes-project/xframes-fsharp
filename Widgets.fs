@@ -6,6 +6,8 @@ open System.Reactive.Subjects
 open Types
 open Services
 open DEdge.Diffract
+open Newtonsoft.Json
+open Externs
 
 let createWidgetNode(widgetType: string, initialProps: Map<string, obj>, initialChildren: WidgetNode list) : WidgetNode =
     { 
@@ -35,6 +37,14 @@ let createRawWidgetNodeWithId (id: int, widgetType: string, initialProps: Map<st
         Type = widgetType 
         Props = initialProps
         Children = initialChildren |> List.map createRawWidgetNodeWithIdFromRawWidgetNodeWithoutId
+    }
+
+// todo: rename!
+let createRawChildlessWidgetNodeWithId (id: int, widgetType: string, initialProps: Map<string, obj>) : RawChildlessWidgetNodeWithId =
+    { 
+        Id = id
+        Type = widgetType 
+        Props = initialProps
     }
 
 let createWidgetNodeFromRawWidgetNode (rawWidgetNode: RawWidgetNode) =
@@ -166,7 +176,7 @@ type Inner() =
     interface IComponent<Map<string, obj>> with
         member this.Render() =
             WidgetNode (
-                node [
+                makeRootNode [
                     unformattedText "hello"
                 ]
             )
@@ -203,12 +213,52 @@ type ShadowNodeManager() =
 
 let shadowNodeManager = ShadowNodeManager()
 
-let rec traverseTree<'T>(root: Renderable<'T>): ShadowNode * int =
+
+
+
+type WidgetNodeAdapter() =
+    /// Converts a JSON-like Map<string, obj> to a WidgetNode
+    member this.FromJson(json: Map<string, obj>) =
+        let ``type`` = json.["type"] :?> string
+        let id = json.["id"] :?> int
+        let props =
+            json 
+            |> Map.remove "id" 
+            |> Map.remove "type"
+
+        // Initialize WidgetNode with reactive Props
+        {
+            //Id = id
+            Type = ``type``
+            Props = new BehaviorSubject<Map<string, obj>>(props)
+            Children = new BehaviorSubject<WidgetNode list>([]) // Modify if children are part of the JSON
+        }
+
+    member this.ToJson(widgetNode: RawWidgetNodeWithId) =
+        let props = widgetNode.Props
+
+        props
+        |> Map.add "id" (box widgetNode.Id)
+        |> Map.add "type" (box widgetNode.Type)
+
+    member this.ToJson(widgetNode: RawChildlessWidgetNodeWithId) =
+        let props = widgetNode.Props
+
+        props
+        |> Map.add "id" (box widgetNode.Id)
+        |> Map.add "type" (box widgetNode.Type)
+
+
+let jsonAdapter = WidgetNodeAdapter()
+
+let rec traverseTree<'T>(root: Renderable<'T>): ShadowNode =
     match root with
     | Component component ->
         // Extract props and children for the component
         let props = Map.empty // Placeholder for actual props (e.g., from component)
         let child = component.Render()
+        let id = WidgetRegistrationService.getNextComponentId()
+        
 
         // Subscribe to changes in the component's props
         shadowNodeManager.SubscribeToBehaviorSubject(component.Props, fun _ ->
@@ -217,13 +267,32 @@ let rec traverseTree<'T>(root: Renderable<'T>): ShadowNode * int =
         )
 
         // Recursively traverse the child
-        let shadowChild, nextId = traverseTree child
-        ShadowComponent(WidgetRegistrationService.getNextWidgetId(), "Component", props, [shadowChild]), nextId
+        let shadowChild = traverseTree child
+
+        let shadowWidget = 
+            { 
+                Id = id
+                Type = "Component"
+                Props = props
+                Children = [shadowChild]
+            }
+
+        shadowWidget
 
     | WidgetNode widgetNode ->
         // Extract children and props for the WidgetNode
         let children = widgetNode.Children.Value
         let props = widgetNode.Props.Value
+        let id = WidgetRegistrationService.getNextWidgetId()
+
+        let rawNode = createRawChildlessWidgetNodeWithId(id, widgetNode.Type, widgetNode.Props.Value)
+
+        let json = jsonAdapter.ToJson(rawNode)
+        let jsonString = JsonConvert.SerializeObject(json)
+
+        printfn "%s" jsonString
+
+        setElement(jsonString)
 
         // Subscribe to changes in props and children
         shadowNodeManager.SubscribeToBehaviorSubject(widgetNode.Props, fun newProps ->
@@ -236,14 +305,22 @@ let rec traverseTree<'T>(root: Renderable<'T>): ShadowNode * int =
             // Trigger re-render or other update logic here
         )
 
-        // Recursively process children
-        let shadowChildren, nextId =
-            children |> List.fold (fun (acc, id) child ->
-                let shadowChild, newId = traverseTree (WidgetNode child)
-                (shadowChild :: acc, newId)
-            ) ([], WidgetRegistrationService.getNextWidgetId())
+        let shadowChildren = 
+            children |> List.map (fun child -> traverseTree (WidgetNode child))
 
-        ShadowWidget(WidgetRegistrationService.getNextWidgetId(), widgetNode.Type, props, List.rev shadowChildren), nextId
+        let childrenIds =
+            shadowChildren |> List.map (fun shadowChild -> shadowChild.Id)
 
+        let childrenJson = JsonConvert.SerializeObject(childrenIds)
 
+        setChildren(id, childrenJson)
 
+        let shadowWidget = 
+            { 
+                Id = id
+                Type = widgetNode.Type
+                Props = props
+                Children = List.rev shadowChildren 
+            }
+
+        shadowWidget

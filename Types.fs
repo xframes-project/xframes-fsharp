@@ -16,6 +16,12 @@ type RawWidgetNodeWithId = {
     mutable Children: RawWidgetNodeWithId list
 }
 
+type RawChildlessWidgetNodeWithId = {
+    Id: int
+    Type: string
+    Props: Map<string, obj>
+}
+
 type IHasProps<'T> =
     abstract member Props: BehaviorSubject<'T>
 
@@ -36,9 +42,13 @@ and IComponent<'T> =
     inherit IHasProps<'T>
     abstract member Render: unit -> Renderable<'T>
 
-type ShadowNode =
-    | ShadowComponent of int * string * Map<string, obj> * ShadowNode list
-    | ShadowWidget of int * string * Map<string, obj> * ShadowNode list
+type ShadowNode = 
+    { 
+        Id: int
+        Type: string
+        Props: Map<string, obj>
+        Children: ShadowNode list 
+    }
 
 type Theme2(colorsDict: Dictionary<int, List<obj>>) =
     member val colors = colorsDict with get, set

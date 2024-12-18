@@ -30,36 +30,6 @@ type SetData = {
     data: List<obj>
 }
 
-
-type WidgetNodeAdapter() =
-    /// Converts a JSON-like Map<string, obj> to a WidgetNode
-    member this.FromJson(json: Map<string, obj>) =
-        let ``type`` = json.["type"] :?> string
-        let id = json.["id"] :?> int
-        let props =
-            json 
-            |> Map.remove "id" 
-            |> Map.remove "type"
-
-        // Initialize WidgetNode with reactive Props
-        {
-            //Id = id
-            Type = ``type``
-            Props = new BehaviorSubject<Map<string, obj>>(props)
-            Children = new BehaviorSubject<WidgetNode list>([]) // Modify if children are part of the JSON
-        }
-
-    /// Converts a WidgetNode to a JSON-like Map<string, obj>
-    member this.ToJson(widgetNode: RawWidgetNodeWithId) =
-        // Extract Props' current value
-        let props = widgetNode.Props
-
-        // Add `id` and `type` to Props for JSON representation
-        props
-        |> Map.add "id" (box widgetNode.Id)
-        |> Map.add "type" (box widgetNode.Type)
-
-
 type WidgetTreeApplier(jsonAdapter: WidgetNodeAdapter, root: RawWidgetNodeWithId) =
     inherit AbstractApplier<RawWidgetNodeWithId>(root)
 
