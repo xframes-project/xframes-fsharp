@@ -1,168 +1,107 @@
 ﻿open System
+open System.Threading
+open System.Reactive.Subjects
 open System.Threading.Tasks
 open System.Collections.Generic
 open System.Runtime.InteropServices
 open Newtonsoft.Json
-
-[<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
-extern void resizeWindow(int width, int height)
-
-[<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
-extern void setElement(string elementJson)
-
-[<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
-extern void patchElement(int id, string elementJson)
-
-[<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
-extern void elementInternalOp(int id, string elementJson)
-
-[<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
-extern void setChildren(int id, string childrenIds)
-
-[<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
-extern void appendChild(int parentId, int childId)
-
-[<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
-extern IntPtr getChildren(int id)
-
-[<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
-extern void appendTextToClippedMultiLineTextRenderer(int id, string data)
-
-[<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
-extern IntPtr getStyle()
-
-[<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
-extern void patchStyle(string styleDef)
-
-[<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
-extern void setDebug(bool debug)
-
-[<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
-extern void showDebugWindow()
-
-//// Define a managed function that matches the callback signature
-//let onTextChangedHandler (id: int, value: string) =
-//    printfn "Text changed! ID: %d, Value: %s" id value
-
-//// Create a delegate using Marshal
-//let onTextChangedDelegate = 
-//    Marshal.GetFunctionPointerForDelegate(Action<int, string>(fun id value -> onTextChangedHandler(id, value)))
-
-type OnInitCb = unit -> unit
-//type OnTextChangedCb = int * string -> unit
-type OnComboChangedCb = int * int -> unit
-type OnNumericValueChangedCb = int * float -> unit
-type OnBooleanValueChangedCb = int * bool -> unit
-type OnMultipleNumericValuesChangedCb = int * float[] -> unit
-type OnClickCb = int -> unit
-
-[<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]
-extern void init(
-    string assetsBasePath,
-    string rawFontDefinitions,
-    string rawStyleOverrideDefinitions,
-    IntPtr onInit,
-    IntPtr onTextChanged,
-    IntPtr onComboChanged,
-    IntPtr onNumericValueChanged,
-    IntPtr onBooleanValueChanged,
-    IntPtr onMultipleNumericValuesChanged,
-    IntPtr onClick
-)
-
-// Define a non-generic delegate matching the callback signature
-type OnTextChangedCb = delegate of int * string -> unit
-
-// Create an instance of the delegate
-let onTextChangedDelegate = OnTextChangedCb(fun id value -> printfn "Text changed: %d, %s" id value)
+open DEdge.Diffract
+open Widgets
+open Applier
+open Externs
+open Theme
+open Types
+open Services
 
 
 
-type ImGuiCol =
-    | Text = 0
-    | TextDisabled = 1
-    | WindowBg = 2
-    | ChildBg = 3
-    | PopupBg = 4
-    | Border = 5
-    | BorderShadow = 6
-    | FrameBg = 7
-    | FrameBgHovered = 8
-    | FrameBgActive = 9
-    | TitleBg = 10
-    | TitleBgActive = 11
-    | TitleBgCollapsed = 12
-    | MenuBarBg = 13
-    | ScrollbarBg = 14
-    | ScrollbarGrab = 15
-    | ScrollbarGrabHovered = 16
-    | ScrollbarGrabActive = 17
-    | CheckMark = 18
-    | SliderGrab = 19
-    | SliderGrabActive = 20
-    | Button = 21
-    | ButtonHovered = 22
-    | ButtonActive = 23
-    | Header = 24
-    | HeaderHovered = 25
-    | HeaderActive = 26
-    | Separator = 27
-    | SeparatorHovered = 28
-    | SeparatorActive = 29
-    | ResizeGrip = 30
-    | ResizeGripHovered = 31
-    | ResizeGripActive = 32
-    | Tab = 33
-    | TabHovered = 34
-    | TabActive = 35
-    | TabUnfocused = 36
-    | TabUnfocusedActive = 37
-    | PlotLines = 38
-    | PlotLinesHovered = 39
-    | PlotHistogram = 40
-    | PlotHistogramHovered = 41
-    | TableHeaderBg = 42
-    | TableBorderStrong = 43
-    | TableBorderLight = 44
-    | TableRowBg = 45
-    | TableRowBgAlt = 46
-    | TextSelectedBg = 47
-    | DragDropTarget = 48
-    | NavHighlight = 49
-    | NavWindowingHighlight = 50
-    | NavWindowingDimBg = 51
-    | ModalWindowDimBg = 52
-    | COUNT = 53
+// Record types for data structures
+type JsonSetData = { Op: string; Data: obj }
+type JsonSetValue = { Op: string; Value: string }
+type JsonSetSelectedIndex = { Op: string; Index: int }
+type JsonResetData = { Op: string }
+type JsonAppendData = { Op: string; Data: obj }
+type JsonAppendDataToPlotLine = { Op: string; X: float; Y: float }
+type JsonSetAxesDecimalDigits = { Op: string; X: float; Y: float }
+type JsonSetAxesAutoFit = { Op: string; Enabled: bool }
 
-
-let createColorDef (hex: string) (opacity: float) : obj list = 
-    [hex; opacity]
-
-
-type Theme2(colorsDict: Dictionary<int, List<obj>>) =
-    member val colors = colorsDict with get, set
-
-
-type FontDef = {
-    name: string
-    size: int
+type SetData = {
+    op: string
+    data: List<obj>
 }
 
-type Widget = {
-    Id: int
-    Type: string
-    mutable Props: Map<string, obj>
-    mutable Children: Widget list
-}
+type WidgetTreeApplier(jsonAdapter: WidgetNodeAdapter, root: RawWidgetNodeWithId) =
+    inherit AbstractApplier<RawWidgetNodeWithId>(root)
+
+    // Helper functions for serialization and deserialization
+    let serializeToJson (data: obj) = JsonConvert.SerializeObject(data)
+    let deserializeList (json: string) =
+        JsonConvert.DeserializeObject<List<int>>(json)
+
+    // Reactive helper: Update `Children` safely
+    let updateChildren (node: WidgetNode) (updateFn: WidgetNode list -> WidgetNode list) =
+        let currentChildren = node.Children.Value
+        node.Children.OnNext(updateFn currentChildren)
+
+    // Clear all children of the root
+    override this.OnClear() =
+        root.Children <- []
+
+    // Insert a node bottom-up (logic can be customized)
+    override this.InsertBottomUp(index: int, instance: RawWidgetNode) =
+        ignore()
+
+    // Insert a node top-down
+    override this.InsertTopDown(index: int, instance: RawWidgetNode) =
+        let widgetWithId = createRawWidgetNodeWithIdFromRawWidgetNodeWithoutId(instance)
+
+        WidgetRegistrationService.registerWidget(widgetWithId.Id, widgetWithId)
+
+        match widgetWithId.Props.TryFind("onClick") with
+        | Some value ->
+            match value with
+            | :? (unit -> unit) as onClickFn -> WidgetRegistrationService.registerWidgetForOnClickEvent(widgetWithId.Id, onClickFn)
+            | _ -> ignore()
+        | None -> ignore()
+        
+        let json = jsonAdapter.ToJson(widgetWithId)
+        let jsonString = serializeToJson json
+
+        printfn "%s" jsonString
+
+        setElement(jsonString)
+
+        let childrenJson = serializeToJson [ widgetWithId.Id ]
+        setChildren(this.Current.Id, childrenJson)
+
+        this.Root.Children <- this.Root.Children @ [widgetWithId]
+
+        ignore()
+
+    // Move nodes within the current node's children
+    override this.Move(fromIndex: int, toIndex: int, count: int) =
+        let moveItems (list: WidgetNode list) fromIndex toIndex count =
+            let itemsToMove = list |> List.skip fromIndex |> List.take count
+            let remaining = 
+                list 
+                |> List.mapi (fun i x -> if i >= fromIndex && i < fromIndex + count then None else Some x)
+                |> List.choose id
+            let (before, after) = remaining |> List.splitAt toIndex
+            before @ itemsToMove @ after
+
+        //updateChildren this.Current (fun children ->
+        //    moveItems children fromIndex toIndex count
+        //)
+        ignore()
+
+    // Remove a range of children
+    override this.Remove(index: int, count: int) =
+        ignore()
+        //updateChildren this.Current (fun children ->
+        //    children.[0..index - 1] @ children.[index + count..]
+        //)
 
 
-let createNode id type' props children =
-    {
-        Id = id
-        Type = type'
-        Props = props
-        Children = children
-    }
 
 let fontDefs =
     let fontSizes = [16; 18; 20; 24; 28; 32; 36; 48]
@@ -173,81 +112,6 @@ let fontDefs =
 let fontsDictionary = new Dictionary<string, FontDef list>()
 fontsDictionary.Add("defs", fontDefs)
 
-let fontDefsJson = JsonConvert.SerializeObject(fontsDictionary)
-
-    
-let theme2Colors = 
-    [
-        "white", "#FFFFFF"
-        "lighterGrey", "#B0B0B0"
-        "black", "#000000"
-        "lightGrey", "#A0A0A0"
-        "darkestGrey", "#1A1A1A"
-        "darkerGrey", "#505050"
-        "darkGrey", "#2E2E2E"
-    ] |> Map.ofList
-
-let colorsDict = 
-    let dict = new Dictionary<int, obj list>()
-    
-    dict.Add(int ImGuiCol.Text, [theme2Colors.["white"]; 1])
-    dict.Add(int ImGuiCol.TextDisabled, [theme2Colors.["lighterGrey"]; 1])
-    dict.Add(int ImGuiCol.WindowBg, [theme2Colors.["black"]; 1])
-    dict.Add(int ImGuiCol.ChildBg, [theme2Colors.["black"]; 1])
-    dict.Add(int ImGuiCol.PopupBg, [theme2Colors.["white"]; 1])
-    dict.Add(int ImGuiCol.Border, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.BorderShadow, [theme2Colors.["darkestGrey"]; 1])
-    dict.Add(int ImGuiCol.FrameBg, [theme2Colors.["black"]; 1])
-    dict.Add(int ImGuiCol.FrameBgHovered, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.FrameBgActive, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.TitleBg, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.TitleBgActive, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.TitleBgCollapsed, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.MenuBarBg, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.ScrollbarBg, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.ScrollbarGrab, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.ScrollbarGrabHovered, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.ScrollbarGrabActive, [theme2Colors.["darkestGrey"]; 1])
-    dict.Add(int ImGuiCol.CheckMark, [theme2Colors.["darkestGrey"]; 1])
-    dict.Add(int ImGuiCol.SliderGrab, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.SliderGrabActive, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.Button, [theme2Colors.["black"]; 1])
-    dict.Add(int ImGuiCol.ButtonHovered, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.ButtonActive, [theme2Colors.["black"]; 1])
-    dict.Add(int ImGuiCol.Header, [theme2Colors.["black"]; 1])
-    dict.Add(int ImGuiCol.HeaderHovered, [theme2Colors.["black"]; 1])
-    dict.Add(int ImGuiCol.HeaderActive, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.Separator, [theme2Colors.["darkestGrey"]; 1])
-    dict.Add(int ImGuiCol.SeparatorHovered, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.SeparatorActive, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.ResizeGrip, [theme2Colors.["black"]; 1])
-    dict.Add(int ImGuiCol.ResizeGripHovered, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.ResizeGripActive, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.Tab, [theme2Colors.["black"]; 1])
-    dict.Add(int ImGuiCol.TabHovered, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.TabActive, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.TabUnfocused, [theme2Colors.["black"]; 1])
-    dict.Add(int ImGuiCol.TabUnfocusedActive, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.PlotLines, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.PlotLinesHovered, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.PlotHistogram, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.PlotHistogramHovered, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.TableHeaderBg, [theme2Colors.["black"]; 1])
-    dict.Add(int ImGuiCol.TableBorderStrong, [theme2Colors.["lightGrey"]; 1])
-    dict.Add(int ImGuiCol.TableBorderLight, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.TableRowBg, [theme2Colors.["darkGrey"]; 1])
-    dict.Add(int ImGuiCol.TableRowBgAlt, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.TextSelectedBg, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.DragDropTarget, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.NavHighlight, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.NavWindowingHighlight, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.NavWindowingDimBg, [theme2Colors.["darkerGrey"]; 1])
-    dict.Add(int ImGuiCol.ModalWindowDimBg, [theme2Colors.["darkerGrey"]; 1])
-    
-    dict
-
-
-let themeJson = JsonConvert.SerializeObject(colorsDict)
 
 let rec keepProcessRunning () =
     async {
@@ -261,71 +125,248 @@ let rec keepProcessRunning () =
             do! Task.Delay(1000) |> Async.AwaitTask
     }
 
+// Create an instance of the delegate
+let onTextChangedDelegate = OnTextChangedCb(fun id value -> printfn "Text changed: %d, %s" id value)
+
+// Create an instance of the delegate
+let OnClickDelegate = OnClickCb(fun id -> WidgetRegistrationService.dispatchOnClickEvent(id))
+
 [<EntryPoint>]
 let main argv =
+
+    let rootNodeWithId = createRawWidgetNodeWithId(0, "node", Map.ofList [("root", box true)], [])
+    let rootNode = createRawWidgetNode("node", Map.ofList [("root", box true)], [])
+
+    let appState = new BehaviorSubject<AppState>({ Text = "Hello, world"; Count = 1 })
+
+    let app () =
+        let onClick = Some(fun () ->
+            appState.OnNext({ Text = "Button clicked!"; Count = appState.Value.Count + 1 })
+        )
+
+        makeRootNode [
+            unformattedText (appState.Value.Text)
+            button(appState.Value.Text, onClick)
+        ]
+
+            
+
+    let runApp () =
+        let mutable oldTree = rootNode
+
+        let applier = WidgetTreeApplier(WidgetNodeAdapter(), rootNodeWithId)
+
+        // Function to apply changes
+        let applyChanges (changes: Diff option) =
+            match changes with
+            | Some (Value(x1, x2)) ->
+                printfn "Value difference detected: %A -> %A" x1 x2
+
+            | Some (Nullness(x1, x2)) ->
+                printfn "Nullness difference detected: %A -> %A" x1 x2
+
+            | Some (Record fields) ->
+                printfn "Record difference detected, fields: %A" fields
+
+                for i = 0 to fields.Count - 1 do
+                    match fields.Item(i).Name with
+                    | "Props" -> 
+                        printfn "Props are different!"
+                    | "Children" -> 
+                        printfn "Children are different!"
+                        //let changes = Differ.Diff(oldTree.Children, normalizedNewTree)
+                        ignore()
+                    | _ -> printfn "Unrecognized Name in Field"
+
+            | Some (UnionCase(caseName1, caseName2)) ->
+                printfn "Union case difference detected: %s -> %s" caseName1 caseName2
+
+            | Some (UnionField(case, fields)) ->
+                printfn "Union field difference detected for case %s, fields: %A" case fields
+
+            | Some (Collection(count1, count2, items)) ->
+                printfn "Collection difference detected: %d -> %d, items: %A" count1 count2 items
+
+                for i = 0 to items.Count - 1  do
+                    //applier.InsertTopDown(i, items.Item(i))
+                    printfn "item: %A" (items.Item(i))
+
+            | Some (Dictionary(keysInX1, keysInX2, common)) ->
+                printfn "Dictionary difference detected, keys in X1: %A, keys in X2: %A" keysInX1 keysInX2
+
+            | Some (Custom customDiff) ->
+                printfn "Custom diff detected: %A" customDiff
+
+            | None ->
+                printfn "No changes detected"
+
+        appState.Subscribe(fun state ->
+            printfn "%A" state
+
+            let currentTree = app()
+            let normalizedOldTree = normalizeRawWidgetNodeWithIdTree applier.Root
+            let normalizedNewTree = normalizeWidgetNodeTree currentTree
+
+            printfn "Old tree: %A" normalizedOldTree
+            printfn "New tree: %A" normalizedNewTree
+
+            // Compute the differences
+            //let changes = Differ.Diff(normalizedOldTree, normalizedNewTree)
+
+            let changes = diffNodes(normalizedOldTree, normalizedNewTree)
+
+            match changes with
+            | Some (Value(x1, x2)) ->
+                printfn "Value difference detected: %A -> %A" x1 x2
+
+            | Some (Nullness(x1, x2)) ->
+                printfn "Nullness difference detected: %A -> %A" x1 x2
+
+            | Some (Record fields) ->
+                //printfn "Record difference detected, fields: %A" fields
+
+                for field in fields do
+                    match field.Name with
+                    | "Props" -> 
+                        printfn "Props are different!"
+
+                    | "Children" -> 
+                        printfn "Children are different!"
+                        // Here you could apply your props diff handling logic
+
+
+                        //// Assuming normalizedNewTree.Children and normalizedOldTree.Children
+                        //let changes = diffNodes (normalizedOldTree.Children, normalizedNewTree.Children)
+                        printfn "Children difference detected: %A" field.Diff
+
+                        match field.Diff with
+                        | Collection(_, _, items) ->
+                            for i = 0 to items.Count - 1 do
+                                let child = items.Item(i)
+        
+                                match child.Diff with
+                                | Value(x1, x2) ->
+                                    match x1, x2 with
+                                    | null, RawWidgetNode -> 
+                                        // Directly cast x2 to RawWidgetNode and insert
+                                        applier.InsertTopDown(i, x2 :?> RawWidgetNode)
+                                        printfn "Child added"
+                                    | RawWidgetNode, null -> 
+                                        // Handle child removal (x1 is a RawWidgetNode)
+                                        printfn "Child removed"
+                                    | _ -> 
+                                        // Handle other situations if needed
+                                        printfn "Other Value diff case"
+                                | Record fields ->
+                                    //printfn "Fields difference detected: %A" fields
+                                    for i = 0 to fields.Count - 1 do
+                                        let field = fields.Item(i)
+                                        printfn "Field difference detected: %A" field
+
+
+
+                                    ignore()
+                                | _ -> 
+                                    // Handle other types of diffs, e.g., Nullness, Record, etc.
+                                    printfn "Other diff type detected for child"
+
+                            ignore() // Optional if ignoring the return value
+
+
+                        //// Apply changes to the children using InsertTopDown
+                        //match changes with
+                        //| Some (Collection(_, _, items)) -> 
+                        //    for i = 0 to items.Count - 1 do
+                        //        let child = items.Item(i)
+                        //        printfn "Inserting child: %A" child
+                        //        applier.InsertTopDown(i, child)
+                        //| _ -> printfn "Unexpected changes in children"
+
+                    | name when name.StartsWith("Child") ->
+                        printfn "Child node difference detected: %s" name
+                        // Here, you can handle the diff of child nodes
+
+                    | unreco -> printfn "Unrecognized Name in Field: %s" unreco
+
+            | Some (UnionCase(caseName1, caseName2)) ->
+                printfn "Union case difference detected: %s -> %s" caseName1 caseName2
+
+            | Some (UnionField(case, fields)) ->
+                printfn "Union field difference detected for case %s, fields: %A" case fields
+
+            | Some (Collection(count1, count2, items)) ->
+                printfn "Collection difference detected: %d -> %d, items: %A" count1 count2 items
+
+                for i = 0 to items.Count - 1 do
+                    // Assuming you want to apply changes to each collection item
+                    printfn "Item: %A" (items.Item(i))
+
+            | Some (Dictionary(keysInX1, keysInX2, common)) ->
+                printfn "Dictionary difference detected, keys in X1: %A, keys in X2: %A" keysInX1 keysInX2
+
+            | Some (Custom customDiff) ->
+                printfn "Custom diff detected: %A" customDiff
+
+            | None ->
+                printfn "No changes detected"
+
+            // Apply the changes using the WidgetTreeApplier
+            //applyChanges changes
+
+            // Update the old tree reference
+            oldTree <- normalizedNewTree
+        ) |> ignore
+
+        ignore
+
     
-    let buttonWidget = {
-        Id = 1
-        Type = "Button"
-        Props = Map.ofList [("text", "Click Me")]
-        Children = []
-    }
+    
 
-    let labelWidget = {
-        Id = 2
-        Type = "Label"
-        Props = Map.ofList [("text", "Hello World")]
-        Children = []
-    }
-
-    let nodeWidget = createNode 3 "Node" (Map.ofList [("style", "vertical")]) [buttonWidget; labelWidget]
-
-
-    printfn "%s" fontDefsJson
+    //printfn "%s" fontDefsJson
 
     // Example call to init (using some mock values)
     let assetsPath = "./assets"
 
     // Function that will contain the logic for initializing nodes
     let onInitLogic () =
-        // Root node definition
         let rootNode = 
-            let dict = Dictionary<string, obj>()
+            let dict = new Dictionary<string, obj>()
             dict.Add("id", 0 :> obj)
             dict.Add("type", "node" :> obj)
             dict.Add("root", true :> obj)
             dict
 
-        // Text node definition
-        let textNode = 
-            let dict = Dictionary<string, obj>()
-            dict.Add("id", 1 :> obj)
-            dict.Add("type", "unformatted-text" :> obj)
-            dict.Add("text", "Hello, world!" :> obj)
-            dict
-
-        // Serialize and set the elements
         setElement (JsonConvert.SerializeObject(rootNode))
-        setElement (JsonConvert.SerializeObject(textNode))
 
-        // Serialize and set the children
-        setChildren (0, JsonConvert.SerializeObject([1]))
-    
+        //runApp()
+
+        let shadowTree = traverseTree (Component (App()))
+
+        printfn "shadowTree: %A" shadowTree
+
+        ignore()
+
 
     let onInit = Marshal.GetFunctionPointerForDelegate(Action(fun () -> onInitLogic()))
+    //let onInit = Marshal.GetFunctionPointerForDelegate(Action(fun () -> ignore()))
     
     let onTextChangedPtr = Marshal.GetFunctionPointerForDelegate(onTextChangedDelegate)
+    let OnClickPtr = Marshal.GetFunctionPointerForDelegate(OnClickDelegate)
 
     let onComboChanged = Marshal.GetFunctionPointerForDelegate(Action(fun () -> printfn "Initialization callback called!"))
     let onNumericValueChanged = Marshal.GetFunctionPointerForDelegate(Action(fun () -> printfn "Initialization callback called!"))
     let onBooleanValueChanged = Marshal.GetFunctionPointerForDelegate(Action(fun () -> printfn "Initialization callback called!"))
     let onMultipleNumericValuesChanged = Marshal.GetFunctionPointerForDelegate(Action(fun () -> printfn "Initialization callback called!"))
-    let onClick = Marshal.GetFunctionPointerForDelegate(Action(fun () -> printfn "Initialization callback called!"))
+    //let onClick = Marshal.GetFunctionPointerForDelegate(Action<int>(fun (id: int) -> onClickLogic(id)))
 
-    init(assetsPath, fontDefsJson, themeJson, onInit, onTextChangedPtr, onComboChanged, onNumericValueChanged, onBooleanValueChanged, onMultipleNumericValuesChanged, onClick)
+    let fontDefsJson = JsonConvert.SerializeObject(fontsDictionary)
+    let themeJson = JsonConvert.SerializeObject(colorsDict)
 
-    let process = keepProcessRunning ()
-    Async.Start process
+
+    init(assetsPath, fontDefsJson, themeJson, onInit, onTextChangedPtr, onComboChanged, onNumericValueChanged, onBooleanValueChanged, onMultipleNumericValuesChanged, OnClickPtr)
+
+    let appProcess = keepProcessRunning ()
+    Async.Start appProcess
     
     // Prevent the app from terminating by waiting indefinitely
     Console.ReadLine() |> ignore
