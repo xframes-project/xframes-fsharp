@@ -11,9 +11,11 @@
     <Compile Include="Theme.fs" />
 	<Compile Include="Externs.fs" />
 	<Compile Include="Services.fs" />
+	<Compile Include="WidgetHelpers.fs" />
     <Compile Include="Widgets.fs" />
     <Compile Include="Applier.fs" />
     <Compile Include="WidgetNodeJsonAdapter.fs" />
+    <Compile Include="TreeDiffing.fs" />
     <Compile Include="TreeTraversal.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

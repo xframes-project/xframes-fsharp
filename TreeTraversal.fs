@@ -9,6 +9,7 @@ open Services
 open Externs
 open Widgets
 open WidgetNodeJsonAdapter
+open WidgetHelpers
 
 type ShadowNodeManager() =
     // Store subscriptions for props and children

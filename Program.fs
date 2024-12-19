@@ -14,6 +14,8 @@ open Types
 open Services
 open WidgetNodeJsonAdapter
 open TreeTraversal
+open TreeDiffing
+open WidgetHelpers
 
 
 
