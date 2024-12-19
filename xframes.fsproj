@@ -13,6 +13,8 @@
 	<Compile Include="Services.fs" />
     <Compile Include="Widgets.fs" />
     <Compile Include="Applier.fs" />
+    <Compile Include="WidgetNodeJsonAdapter.fs" />
+    <Compile Include="TreeTraversal.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

@@ -12,6 +12,8 @@ open Externs
 open Theme
 open Types
 open Services
+open WidgetNodeJsonAdapter
+open TreeTraversal
 
 
 
@@ -30,7 +32,7 @@ type SetData = {
     data: List<obj>
 }
 
-type WidgetTreeApplier(jsonAdapter: WidgetNodeAdapter, root: RawWidgetNodeWithId) =
+type WidgetTreeApplier(jsonAdapter: WidgetNodeJsonAdapter, root: RawWidgetNodeWithId) =
     inherit AbstractApplier<RawWidgetNodeWithId>(root)
 
     // Helper functions for serialization and deserialization
@@ -154,7 +156,7 @@ let main argv =
     let runApp () =
         let mutable oldTree = rootNode
 
-        let applier = WidgetTreeApplier(WidgetNodeAdapter(), rootNodeWithId)
+        let applier = WidgetTreeApplier(WidgetNodeJsonAdapter(), rootNodeWithId)
 
         // Function to apply changes
         let applyChanges (changes: Diff option) =
