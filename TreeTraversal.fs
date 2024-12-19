@@ -37,6 +37,11 @@ type ShadowNodeManager() =
 
 let shadowNodeManager = ShadowNodeManager()
 
+let handleWidgetNode(widget: WidgetNode) =
+    match widget.Type with
+    | t when t = WidgetTypes.Button -> printfn "It's a button" 
+    | _ -> ()
+
 let rec traverseTree<'T>(root: Renderable<'T>): ShadowNode =
     match root with
     | IComponent component ->
@@ -90,6 +95,8 @@ let rec traverseTree<'T>(root: Renderable<'T>): ShadowNode =
             printfn "WidgetChildren for %s changed: %A" (string widgetNode.Type) newChildren
             // Trigger re-render or other update logic here
         )
+
+        handleWidgetNode(widgetNode)
 
         let shadowChildren = 
             children |> List.map (fun child -> traverseTree (WidgetNode child))
