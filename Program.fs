@@ -16,6 +16,7 @@ open WidgetNodeJsonAdapter
 open TreeTraversal
 open TreeDiffing
 open WidgetHelpers
+open SampleApp
 
 
 
@@ -138,8 +139,8 @@ let OnClickDelegate = OnClickCb(fun id -> WidgetRegistrationService.dispatchOnCl
 [<EntryPoint>]
 let main argv =
 
-    let rootNodeWithId = createRawWidgetNodeWithId(0, "node", Map.ofList [("root", box true)], [])
-    let rootNode = createRawWidgetNode("node", Map.ofList [("root", box true)], [])
+    let rootNodeWithId = createRawWidgetNodeWithId(0, WidgetTypes.Node, Map.ofList [("root", box true)], [])
+    let rootNode = createRawWidgetNode(WidgetTypes.Node, Map.ofList [("root", box true)], [])
 
     let appState = new BehaviorSubject<AppState>({ Text = "Hello, world"; Count = 1 })
 
@@ -344,7 +345,7 @@ let main argv =
 
         //runApp()
 
-        let shadowTree = traverseTree (Component (App()))
+        let shadowTree = traverseTree (IComponent (App()))
 
         printfn "shadowTree: %A" shadowTree
 

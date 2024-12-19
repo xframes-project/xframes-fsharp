@@ -3,6 +3,12 @@
 open System.Collections.Generic
 open System.Reactive.Subjects
 
+type WidgetTypes =
+    static member Component = "component"
+    static member Node = "node"
+    static member UnformattedText = "unformatted-text"
+    static member Button = "di-button"
+
 type RawWidgetNode = {
     Type: string
     Props: Map<string, obj>
@@ -35,7 +41,7 @@ type WidgetNode =
         member this.Props = this.Props
 
 and Renderable<'T> =
-    | Component of IComponent<'T>
+    | IComponent of IComponent<'T>
     | WidgetNode of WidgetNode
 
 and IComponent<'T> =

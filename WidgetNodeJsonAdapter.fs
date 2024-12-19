@@ -14,12 +14,13 @@ type WidgetNodeJsonAdapter() =
             |> Map.remove "type"
 
         // Initialize WidgetNode with reactive Props
-        {
-            //Id = id
-            Type = ``type``
-            Props = new BehaviorSubject<Map<string, obj>>(props)
-            Children = new BehaviorSubject<WidgetNode list>([]) // Modify if children are part of the JSON
-        }
+        //{
+        //    //Id = id
+        //    Type = ``type``
+        //    Props = new BehaviorSubject<Map<string, obj>>(props)
+        //    Children = new BehaviorSubject<WidgetNode list>([]) // Modify if children are part of the JSON
+        //}
+        ignore()
 
     member this.ToJson(widgetNode: RawWidgetNodeWithId) =
         let props = widgetNode.Props

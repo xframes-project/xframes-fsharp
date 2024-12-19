@@ -17,6 +17,7 @@
     <Compile Include="WidgetNodeJsonAdapter.fs" />
     <Compile Include="TreeDiffing.fs" />
     <Compile Include="TreeTraversal.fs" />
+    <Compile Include="SampleApp.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

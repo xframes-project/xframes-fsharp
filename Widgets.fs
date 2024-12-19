@@ -4,17 +4,19 @@ open System.Reactive.Subjects
 open Types
 open WidgetHelpers
 
+
+
 let makeRootNode (children: WidgetNode list) =
     let props = Map.ofList [("root", box true)]
-    widgetNodeFactory("node", props, children)
+    widgetNodeFactory(WidgetTypes.Node, props, children)
 
 let node (children: WidgetNode list) =
     let props = Map.ofList []
-    widgetNodeFactory("node", props, children)
+    widgetNodeFactory(WidgetTypes.Node, props, children)
 
 let unformattedText (text: string) =
     let props = Map.ofList [("text", box text)]
-    widgetNodeFactory("unformatted-text", props, [])
+    widgetNodeFactory(WidgetTypes.UnformattedText, props, [])
 
 let button (label: string, onClick: (unit -> unit) option) =
     let props =
@@ -24,7 +26,7 @@ let button (label: string, onClick: (unit -> unit) option) =
             | Some handler -> ("onClick", box handler)
             | None -> ()
         ]
-    widgetNodeFactory("di-button", props, [])
+    widgetNodeFactory(WidgetTypes.Button, props, [])
 
 let rec normalizeRawWidgetNodeWithIdTree (node: RawWidgetNodeWithId): RawWidgetNode =
     {
@@ -48,23 +50,4 @@ type BaseComponent<'T>() =
         member this.Render() =
             // Abstract method to be overridden
             failwith "Render method must be implemented"
-
-type Inner() =
-    inherit BaseComponent<Map<string, obj>>()
-    interface IComponent<Map<string, obj>> with
-        member this.Render() =
-            WidgetNode (
-                makeRootNode [
-                    unformattedText "hello"
-                ]
-            )
-
-type App() =
-    inherit BaseComponent<Map<string, obj>>()
-    interface IComponent<Map<string, obj>> with
-        member this.Render() =
-            Component(Inner())
-
-
-
 

@@ -39,7 +39,7 @@ let shadowNodeManager = ShadowNodeManager()
 
 let rec traverseTree<'T>(root: Renderable<'T>): ShadowNode =
     match root with
-    | Component component ->
+    | IComponent component ->
         // Extract props and children for the component
         let props = Map.empty // Placeholder for actual props (e.g., from component)
         let child = component.Render()
@@ -58,7 +58,7 @@ let rec traverseTree<'T>(root: Renderable<'T>): ShadowNode =
         let shadowWidget = 
             { 
                 Id = id
-                Type = "Component"
+                Type = WidgetTypes.Component
                 Props = props
                 Children = [shadowChild]
             }
@@ -82,12 +82,12 @@ let rec traverseTree<'T>(root: Renderable<'T>): ShadowNode =
 
         // Subscribe to changes in props and children
         shadowNodeManager.SubscribeToBehaviorSubject(widgetNode.Props, fun newProps ->
-            printfn "WidgetProps for %s changed: %A" widgetNode.Type newProps
+            printfn "WidgetProps for %s changed: %A" (string widgetNode.Type) newProps
             // Trigger re-render for this specific widget node
         )
 
         shadowNodeManager.SubscribeToBehaviorSubject(widgetNode.Children, fun newChildren ->
-            printfn "WidgetChildren for %s changed: %A" widgetNode.Type newChildren
+            printfn "WidgetChildren for %s changed: %A" (string widgetNode.Type) newChildren
             // Trigger re-render or other update logic here
         )
 
