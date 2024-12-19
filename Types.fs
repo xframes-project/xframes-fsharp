@@ -46,6 +46,8 @@ and Renderable<'T> =
 
 and IComponent<'T> =
     inherit IHasProps<'T>
+    abstract member Init: unit -> unit
+    abstract member Destroy: unit -> unit
     abstract member Render: unit -> Renderable<'T>
 
 type ShadowNode = 

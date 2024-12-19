@@ -7,7 +7,6 @@ open Newtonsoft.Json
 open Types
 open Services
 open Externs
-open Widgets
 open WidgetNodeJsonAdapter
 open WidgetHelpers
 
@@ -37,9 +36,18 @@ type ShadowNodeManager() =
 
 let shadowNodeManager = ShadowNodeManager()
 
-let handleWidgetNode(widget: WidgetNode) =
+let handleWidgetNode(widget: RawChildlessWidgetNodeWithId) =
     match widget.Type with
-    | t when t = WidgetTypes.Button -> printfn "It's a button" 
+    | t when t = WidgetTypes.Button ->
+        match widget.Props.TryFind("onClick") with
+        | Some(onClickFunc) -> 
+            match onClickFunc with
+            | :? (unit -> unit) as onClickHandler -> 
+                WidgetRegistrationService.registerWidgetForOnClickEvent(widget.Id, onClickHandler)
+            | _ -> 
+                printfn "onClick handler is not of the expected type."
+        | None -> 
+            printfn "No onClick handler found for button."
     | _ -> ()
 
 let rec traverseTree<'T>(root: Renderable<'T>): ShadowNode =
@@ -47,6 +55,7 @@ let rec traverseTree<'T>(root: Renderable<'T>): ShadowNode =
     | IComponent component ->
         // Extract props and children for the component
         let props = Map.empty // Placeholder for actual props (e.g., from component)
+        component.Init()
         let child = component.Render()
         let id = WidgetRegistrationService.getNextComponentId()
         
@@ -96,7 +105,7 @@ let rec traverseTree<'T>(root: Renderable<'T>): ShadowNode =
             // Trigger re-render or other update logic here
         )
 
-        handleWidgetNode(widgetNode)
+        handleWidgetNode(rawNode)
 
         let shadowChildren = 
             children |> List.map (fun child -> traverseTree (WidgetNode child))

@@ -45,8 +45,20 @@ let rec normalizeWidgetNodeTree (node: WidgetNode): RawWidgetNode =
 
 type BaseComponent<'T>() =
     let defaultProps = new BehaviorSubject<'T>(Unchecked.defaultof<'T>)
+
+    member x.Props = new BehaviorSubject<'T>(Unchecked.defaultof<'T>)
+
     interface IComponent<'T> with
         member this.Props = defaultProps
+
+        member this.Init() = 
+            // Abstract method to be overridden
+            failwith "Init method must be implemented"
+
+        member this.Destroy() = 
+            // Abstract method to be overridden
+            failwith "Destroy method must be implemented"
+        
         member this.Render() =
             // Abstract method to be overridden
             failwith "Render method must be implemented"
