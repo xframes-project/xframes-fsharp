@@ -26,7 +26,10 @@ let rec subscribeToPropsHelper<'T> (shadowNode: ShadowNode<'T>) =
         shadowNode.PropsChangeSubscription <- Some(component.Props.Skip(1).Subscribe(fun newProps ->
             printfn "new props for component %A" newProps
 
-            let newChild = traverseTree(component.Render())
+            // can't call traverseTree just like that, as `component` has already been processed, we just need
+            // to invoke patchElement() using the new props, then process the children and look for differences
+
+            //let newChild = traverseTree(component.Render())
             //shadowNode.Children <- [newChild]
 
             ignore()
