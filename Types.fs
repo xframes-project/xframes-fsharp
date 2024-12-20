@@ -2,6 +2,7 @@
 
 open System.Collections.Generic
 open System.Reactive.Subjects
+open System
 
 type WidgetTypes =
     static member Component = "component"
@@ -46,14 +47,6 @@ type BaseComponent<'T>() =
 and Renderable<'T> =
     | BaseComponent of BaseComponent<'T>
     | WidgetNode of WidgetNode
-
-type ShadowNode = 
-    { 
-        Id: int
-        Type: string
-        Props: Map<string, obj>
-        Children: ShadowNode list 
-    }
 
 type Theme2(colorsDict: Dictionary<int, List<obj>>) =
     member val colors = colorsDict with get, set

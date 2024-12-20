@@ -12,16 +12,11 @@ type App() as this =
     inherit BaseComponent<Map<string, obj>>()
 
     let onClick() =
-        printfn "Clicked! %A" sampleAppState.Value
         sampleAppState.OnNext({ Text = "Hello, world"; Count = sampleAppState.Value.Count + 1 })
-        printfn "After clicked! %A %A" sampleAppState.Value this.Props.Value
 
     override this.Init() =
-        printfn "Init()"
 
         this.sub <- Some(sampleAppState.Subscribe(fun latestAppState -> 
-            printfn "combine!"
-
             this.Props.OnNext(
                 Map.ofList [
                     "text", latestAppState.Text :> obj

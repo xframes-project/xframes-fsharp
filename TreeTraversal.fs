@@ -10,33 +10,44 @@ open Externs
 open WidgetNodeJsonAdapter
 open WidgetHelpers
 
-type ShadowNodeManager() =
-    // Store subscriptions for props and children
-    let subscriptions = new System.Collections.Generic.Dictionary<obj, IDisposable>()
+type ShadowNode<'T>(id: int, renderable: Renderable<'T>, subscribeToProps: ShadowNode<'T> -> unit) = 
+    member val Id: int = id with get
+    member val Renderable = renderable
+    member val Children: ShadowNode<'T> list = [] with get, set
+    member val PropsChangeSubscription: IDisposable option = None with get, set
+    member val ChildrenChangeSubscription: IDisposable option = None with get, set
 
-    // Function to subscribe to a BehaviorSubject and handle reactivity
-    member this.SubscribeToBehaviorSubject<'T>(subject: BehaviorSubject<'T>, onNext: 'T -> unit) =
-        if not (subscriptions.ContainsKey(subject)) then
-            subscriptions.Add(subject, subject.Skip(1).Subscribe(onNext))
-    
-    // Function to unsubscribe from a BehaviorSubject
-    member this.UnsubscribeFromBehaviorSubject(subject: obj) =
-        // Try to get the subscription associated with the subject
-        match subscriptions.TryGetValue(subject) with
-        | true, subscription ->
-            // Dispose of the subscription if found
-            subscription.Dispose()
-            // Remove the subject from the dictionary
-            subscriptions.Remove(subject) |> ignore
-        | _ -> 
-            printfn "No subscription found for the provided subject"
+    member this.Init() =
+        subscribeToProps this
 
-let shadowNodeManager = ShadowNodeManager()
+let rec subscribeToPropsHelper<'T> (shadowNode: ShadowNode<'T>) =
+    match shadowNode.Renderable with
+    | BaseComponent component ->
+        shadowNode.PropsChangeSubscription <- Some(component.Props.Skip(1).Subscribe(fun newProps ->
+            printfn "new props for component %A" newProps
 
-let handleComponent<'T>(comp: BaseComponent<'T>) =
+            let newChild = traverseTree(component.Render())
+            //shadowNode.Children <- [newChild]
+
+            ignore()
+        ))
+    | WidgetNode widgetNode ->
+        shadowNode.PropsChangeSubscription <- Some(widgetNode.Props.Skip(1).Subscribe(fun newProps ->
+            printfn "new props for widget node %A" newProps
+
+            ignore()
+            
+            //let newChildren = widgetNode.Children.Value
+            //let newShadowChildren = 
+            //    newChildren |> List.map (fun child -> traverseTree (WidgetNode child))
+
+            //shadowNode.Children <- newShadowChildren
+        ))
+
+and handleComponent<'T>(comp: BaseComponent<'T>) =
     ignore()
 
-let handleWidgetNode(widget: RawChildlessWidgetNodeWithId) =
+and handleWidgetNode(widget: RawChildlessWidgetNodeWithId) =
     match widget.Type with
     | t when t = WidgetTypes.Button ->
         match widget.Props.TryFind("onClick") with
@@ -50,41 +61,27 @@ let handleWidgetNode(widget: RawChildlessWidgetNodeWithId) =
             printfn "No onClick handler found for button."
     | _ -> ()
 
-let rec traverseTree<'T>(root: Renderable<'T>): ShadowNode =
+and traverseTree<'T>(root: Renderable<'T>): ShadowNode<'T> =
     match root with
     | BaseComponent component ->
-        // Extract props and children for the component
-        let props = Map.empty // Placeholder for actual props (e.g., from component)
         component.Init()
         let child = component.Render()
         let id = WidgetRegistrationService.getNextComponentId()
         
         handleComponent(component)
 
-        printfn "About to subscribe to prop changes"
-        // Subscribe to changes in the component's props
-        shadowNodeManager.SubscribeToBehaviorSubject(component.Props, fun _ ->
-            printfn "Component Props or Children changed, re-rendering..."
-            // Trigger re-render for this specific component
-        )
-
-        // Recursively traverse the child
         let shadowChild = traverseTree child
 
-        let shadowWidget = 
-            { 
-                Id = id
-                Type = WidgetTypes.Component
-                Props = props
-                Children = [shadowChild]
-            }
+        let shadowNode = ShadowNode(id, BaseComponent component, subscribeToPropsHelper)
+        shadowNode.Children <- [shadowChild]
 
-        shadowWidget
+        shadowNode.Init()
+
+        shadowNode
 
     | WidgetNode widgetNode ->
         // Extract children and props for the WidgetNode
         let children = widgetNode.Children.Value
-        let props = widgetNode.Props.Value
         let id = WidgetRegistrationService.getNextWidgetId()
 
         let rawNode = createRawChildlessWidgetNodeWithId(id, widgetNode.Type, widgetNode.Props.Value)
@@ -92,22 +89,9 @@ let rec traverseTree<'T>(root: Renderable<'T>): ShadowNode =
         let json = jsonAdapter.ToJson(rawNode)
         let jsonString = JsonConvert.SerializeObject(json)
 
-        //printfn "%s" jsonString
+        handleWidgetNode(rawNode)
 
         setElement(jsonString)
-
-        // Subscribe to changes in props and children
-        shadowNodeManager.SubscribeToBehaviorSubject(widgetNode.Props, fun newProps ->
-            printfn "WidgetProps for %s changed: %A" (string widgetNode.Type) newProps
-            // Trigger re-render for this specific widget node
-        )
-
-        shadowNodeManager.SubscribeToBehaviorSubject(widgetNode.Children, fun newChildren ->
-            printfn "WidgetChildren for %s changed: %A" (string widgetNode.Type) newChildren
-            // Trigger re-render or other update logic here
-        )
-
-        handleWidgetNode(rawNode)
 
         let shadowChildren = 
             children |> List.map (fun child -> traverseTree (WidgetNode child))
@@ -119,12 +103,9 @@ let rec traverseTree<'T>(root: Renderable<'T>): ShadowNode =
 
         setChildren(id, childrenJson)
 
-        let shadowWidget = 
-            { 
-                Id = id
-                Type = widgetNode.Type
-                Props = props
-                Children = List.rev shadowChildren 
-            }
+        let shadowNode = ShadowNode(id, WidgetNode widgetNode, subscribeToPropsHelper)
+        shadowNode.Children <- List.rev shadowChildren
 
-        shadowWidget
+        shadowNode.Init()
+
+        shadowNode
