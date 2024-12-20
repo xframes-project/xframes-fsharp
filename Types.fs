@@ -28,27 +28,24 @@ type RawChildlessWidgetNodeWithId = {
     Props: Map<string, obj>
 }
 
-type IHasProps<'T> =
-    abstract member Props: BehaviorSubject<'T>
-
 type WidgetNode = 
     { 
         Type: string
         Props: BehaviorSubject<Map<string, obj>>
         Children: BehaviorSubject<WidgetNode list> 
-    } 
-    interface IHasProps<Map<string, obj>> with
-        member this.Props = this.Props
+    }
 
-and Renderable<'T> =
-    | IComponent of IComponent<'T>
-    | WidgetNode of WidgetNode
+[<AbstractClass>]
+type BaseComponent<'T>() =
+    member val Props = new BehaviorSubject<'T>(Unchecked.defaultof<'T>) with get, set
 
-and IComponent<'T> =
-    inherit IHasProps<'T>
     abstract member Init: unit -> unit
     abstract member Destroy: unit -> unit
     abstract member Render: unit -> Renderable<'T>
+
+and Renderable<'T> =
+    | BaseComponent of BaseComponent<'T>
+    | WidgetNode of WidgetNode
 
 type ShadowNode = 
     { 

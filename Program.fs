@@ -1,24 +1,14 @@
 ﻿open System
-open System.Threading
-open System.Reactive.Subjects
 open System.Threading.Tasks
 open System.Collections.Generic
 open System.Runtime.InteropServices
 open Newtonsoft.Json
-open DEdge.Diffract
-open Widgets
-open Applier
 open Externs
 open Theme
 open Types
 open Services
-open WidgetNodeJsonAdapter
 open TreeTraversal
-open TreeDiffing
-open WidgetHelpers
 open SampleApp
-
-
 
 // Record types for data structures
 type JsonSetData = { Op: string; Data: obj }
@@ -71,9 +61,9 @@ let main argv =
     let onInitLogic () =
 
         let app = App()
-        let shadowTree = traverseTree (IComponent (app))
+        let shadowTree = traverseTree (BaseComponent (app))
 
-        printfn "shadowTree: %A" shadowTree
+        //printfn "shadowTree: %A" shadowTree
 
         ignore()
 

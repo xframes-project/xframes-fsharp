@@ -16,11 +16,8 @@ type ShadowNodeManager() =
 
     // Function to subscribe to a BehaviorSubject and handle reactivity
     member this.SubscribeToBehaviorSubject<'T>(subject: BehaviorSubject<'T>, onNext: 'T -> unit) =
-        // If already subscribed, don't subscribe again
         if not (subscriptions.ContainsKey(subject)) then
-            // Skip very first observable as the component would have just been rendered
-            let subscription = subject.Skip(1).Subscribe(onNext)
-            subscriptions.Add(subject, subscription)
+            subscriptions.Add(subject, subject.Skip(1).Subscribe(onNext))
     
     // Function to unsubscribe from a BehaviorSubject
     member this.UnsubscribeFromBehaviorSubject(subject: obj) =
@@ -35,6 +32,9 @@ type ShadowNodeManager() =
             printfn "No subscription found for the provided subject"
 
 let shadowNodeManager = ShadowNodeManager()
+
+let handleComponent<'T>(comp: BaseComponent<'T>) =
+    ignore()
 
 let handleWidgetNode(widget: RawChildlessWidgetNodeWithId) =
     match widget.Type with
@@ -52,14 +52,16 @@ let handleWidgetNode(widget: RawChildlessWidgetNodeWithId) =
 
 let rec traverseTree<'T>(root: Renderable<'T>): ShadowNode =
     match root with
-    | IComponent component ->
+    | BaseComponent component ->
         // Extract props and children for the component
         let props = Map.empty // Placeholder for actual props (e.g., from component)
         component.Init()
         let child = component.Render()
         let id = WidgetRegistrationService.getNextComponentId()
         
+        handleComponent(component)
 
+        printfn "About to subscribe to prop changes"
         // Subscribe to changes in the component's props
         shadowNodeManager.SubscribeToBehaviorSubject(component.Props, fun _ ->
             printfn "Component Props or Children changed, re-rendering..."
@@ -90,7 +92,7 @@ let rec traverseTree<'T>(root: Renderable<'T>): ShadowNode =
         let json = jsonAdapter.ToJson(rawNode)
         let jsonString = JsonConvert.SerializeObject(json)
 
-        printfn "%s" jsonString
+        //printfn "%s" jsonString
 
         setElement(jsonString)
 
