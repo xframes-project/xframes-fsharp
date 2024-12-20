@@ -397,23 +397,23 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\manes\\.nuget\\packages\\": {},
+    "C:\\Users\\andm\\.nuget\\packages\\": {},
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\dev\\xframes-fsharp\\xframes.fsproj",
+      "projectUniqueName": "C:\\u-blox\\gallery\\ubx\\ulogr\\xframes-fsharp\\xframes.fsproj",
       "projectName": "xframes",
-      "projectPath": "C:\\dev\\xframes-fsharp\\xframes.fsproj",
-      "packagesPath": "C:\\Users\\manes\\.nuget\\packages\\",
-      "outputPath": "C:\\dev\\xframes-fsharp\\obj\\",
+      "projectPath": "C:\\u-blox\\gallery\\ubx\\ulogr\\xframes-fsharp\\xframes.fsproj",
+      "packagesPath": "C:\\Users\\andm\\.nuget\\packages\\",
+      "outputPath": "C:\\u-blox\\gallery\\ubx\\ulogr\\xframes-fsharp\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
       ],
       "configFilePaths": [
-        "C:\\Users\\manes\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\andm\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
@@ -423,7 +423,7 @@
       "sources": {
         "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
         "C:\\Program Files\\dotnet\\library-packs": {},
-        "C:\\Program Files\\dotnet\\sdk\\9.0.100\\FSharp\\library-packs": {},
+        "C:\\Program Files\\dotnet\\sdk\\9.0.101\\FSharp\\library-packs": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
@@ -435,7 +435,7 @@
       "restoreAuditProperties": {
         "enableAudit": "true",
         "auditLevel": "low",
-        "auditMode": "all"
+        "auditMode": "direct"
       },
       "SdkAnalysisLevel": "9.0.100"
     },
@@ -486,7 +486,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.100/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.101/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

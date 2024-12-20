@@ -1,7 +1,12 @@
 ﻿module Applier
 
 open System.Collections.Generic
+open Newtonsoft.Json
 open Types
+open WidgetNodeJsonAdapter
+open WidgetHelpers
+open Services
+open Externs
 
 type IApplier<'T> =
     abstract Current: 'T
@@ -73,40 +78,73 @@ type AbstractApplier<'T>(root: 'T) =
 
 
 
-//type OffsetApplier<'T>(applier: IApplier<'T>, offset: int) =
-//    let mutable nesting = 0
+type WidgetTreeApplier(jsonAdapter: WidgetNodeJsonAdapter, root: RawWidgetNodeWithId) =
+    inherit AbstractApplier<RawWidgetNodeWithId>(root)
 
-//    interface IApplier<'T> with
-//        member _.Current = applier.Current
+    // Helper functions for serialization and deserialization
+    let serializeToJson (data: obj) = JsonConvert.SerializeObject(data)
+    let deserializeList (json: string) =
+        JsonConvert.DeserializeObject<List<int>>(json)
 
-//        member _.OnBeginChanges() = applier.OnBeginChanges()
-//        member _.OnEndChanges() = applier.OnEndChanges()
+    // Reactive helper: Update `Children` safely
+    let updateChildren (node: WidgetNode) (updateFn: WidgetNode list -> WidgetNode list) =
+        let currentChildren = node.Children.Value
+        node.Children.OnNext(updateFn currentChildren)
+
+    // Clear all children of the root
+    override this.OnClear() =
+        root.Children <- []
+
+    // Insert a node bottom-up (logic can be customized)
+    override this.InsertBottomUp(index: int, instance: RawWidgetNode) =
+        ignore()
+
+    // Insert a node top-down
+    override this.InsertTopDown(index: int, instance: RawWidgetNode) =
+        let widgetWithId = createRawWidgetNodeWithIdFromRawWidgetNodeWithoutId(instance)
+
+        WidgetRegistrationService.registerWidget(widgetWithId.Id, widgetWithId)
+
+        match widgetWithId.Props.TryFind("onClick") with
+        | Some value ->
+            match value with
+            | :? (unit -> unit) as onClickFn -> WidgetRegistrationService.registerWidgetForOnClickEvent(widgetWithId.Id, onClickFn)
+            | _ -> ignore()
+        | None -> ignore()
         
-//        member _.Down(node) =
-//            nesting <- nesting + 1
-//            applier.Down(node)
+        let json = jsonAdapter.ToJson(widgetWithId)
+        let jsonString = serializeToJson json
 
-//        member _.Up() =
-//            if nesting <= 0 then failwith "OffsetApplier up called with no corresponding down"
-//            nesting <- nesting - 1
-//            applier.Up()
+        printfn "%s" jsonString
 
-//        member _.InsertTopDown(index, instance) =
-//            let effectiveIndex = if nesting = 0 then index + offset else index
-//            applier.InsertTopDown(effectiveIndex, instance)
+        setElement(jsonString)
 
-//        member _.InsertBottomUp(index, instance) =
-//            let effectiveIndex = if nesting = 0 then index + offset else index
-//            applier.InsertBottomUp(effectiveIndex, instance)
+        let childrenJson = serializeToJson [ widgetWithId.Id ]
+        setChildren(this.Current.Id, childrenJson)
 
-//        member _.Remove(index, count) =
-//            let effectiveIndex = if nesting = 0 then index + offset else index
-//            applier.Remove(effectiveIndex, count)
+        this.Root.Children <- this.Root.Children @ [widgetWithId]
 
-//        member _.Move(fromIndex, toIndex, count) =
-//            let effectiveFrom = if nesting = 0 then fromIndex + offset else fromIndex
-//            let effectiveTo = if nesting = 0 then toIndex + offset else toIndex
-//            applier.Move(effectiveFrom, effectiveTo, count)
+        ignore()
 
-//        member _.Clear() = failwith "Clear is not valid on OffsetApplier"
+    // Move nodes within the current node's children
+    override this.Move(fromIndex: int, toIndex: int, count: int) =
+        let moveItems (list: WidgetNode list) fromIndex toIndex count =
+            let itemsToMove = list |> List.skip fromIndex |> List.take count
+            let remaining = 
+                list 
+                |> List.mapi (fun i x -> if i >= fromIndex && i < fromIndex + count then None else Some x)
+                |> List.choose id
+            let (before, after) = remaining |> List.splitAt toIndex
+            before @ itemsToMove @ after
 
+        //updateChildren this.Current (fun children ->
+        //    moveItems children fromIndex toIndex count
+        //)
+        ignore()
+
+    // Remove a range of children
+    override this.Remove(index: int, count: int) =
+        ignore()
+        //updateChildren this.Current (fun children ->
+        //    children.[0..index - 1] @ children.[index + count..]
+        //)
