@@ -21,19 +21,20 @@ type ShadowNode(id: int, renderableType: string, renderable: Renderable, subscri
     member this.Init() =
         subscribeToProps this
 
-
+// At the moment we're replacing entire children without even trying to determine differences first
+// It works but it's too 'nuclear', not to mention we don't even bother destroying the unused widgets
 let rec subscribeToPropsHelper (shadowNode: ShadowNode) =
     match shadowNode.Renderable with
     | BaseComponent component ->
         shadowNode.PropsChangeSubscription <- Some(component.Props.Skip(1).Subscribe(fun newProps ->
-            printfn "new props for component %A" newProps
+            //printfn "new props for component %A" newProps
 
             if arePropsDifferent(shadowNode.CurrentProps, newProps) then
-                printfn "Yes, different: %A %A" shadowNode.CurrentProps newProps
+                //printfn "Yes, different: %A %A" shadowNode.CurrentProps newProps
 
                 let shadowChild = component.Render()
 
-                printfn "new props for component %A" shadowChild
+                //printfn "new props for component %A" shadowChild
 
                 shadowNode.Children <- [traverseTree shadowChild]
                 shadowNode.CurrentProps <- newProps
@@ -44,10 +45,20 @@ let rec subscribeToPropsHelper (shadowNode: ShadowNode) =
         ))
     | WidgetNode widgetNode ->
         shadowNode.PropsChangeSubscription <- Some(widgetNode.Props.Skip(1).Subscribe(fun newProps ->
-            printfn "new props for widget node %A" newProps
+            //printfn "new props for widget node %A" newProps
 
             WidgetRegistrationService.patchWidget(shadowNode.Id, newProps)
 
+            let children = widgetNode.Children.Value
+            let shadowChildren = 
+                children |> List.map (fun child -> traverseTree child)
+
+            let childrenIds =
+                shadowChildren |> List.map (fun shadowChild -> shadowChild.Id)
+
+            WidgetRegistrationService.linkChildren(shadowNode.Id, childrenIds)
+
+            shadowNode.Children <- shadowChildren
             shadowNode.CurrentProps <- newProps
 
             ignore()
@@ -91,7 +102,7 @@ and traverseTree(root: Renderable): ShadowNode =
         shadowNode.Children <- [shadowChild]
         shadowNode.CurrentProps <- component.Props.Value
 
-        printfn "shadowNode.CurrentProps %A" component.Props.Value
+        //printfn "shadowNode.CurrentProps %A" component.Props.Value
 
         shadowNode.Init()
 

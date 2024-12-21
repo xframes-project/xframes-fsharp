@@ -66,7 +66,7 @@ module WidgetRegistrationService =
     let dispatchOnClickEvent id =
         match onClickRegistry.Value.TryFind id with
         | Some fn -> 
-            printfn "About to invoke onClick fn for widget %d" id
+            //printfn "About to invoke onClick fn for widget %d" id
             eventsSubject.OnNext(fun () -> fn())
             //fn()
         | None -> printfn "No event handler for ID %d" id

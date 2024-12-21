@@ -32,7 +32,7 @@ type App() =
 
 
     override this.Render() =
-        printfn "Rendering SampleApp"
+        //printfn "Rendering SampleApp"
 
         let textNodes = 
             [ for _ in 1 .. sampleAppState.Value.Count -> 
@@ -58,7 +58,7 @@ type Root() =
         ignore()
 
     override this.Render() =
-        printfn "Rendering Root"
+        //printfn "Rendering Root"
 
         let ret: BaseComponent = App()
 
