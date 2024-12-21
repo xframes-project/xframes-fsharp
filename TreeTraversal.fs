@@ -35,22 +35,10 @@ let rec subscribeToPropsHelper (shadowNode: ShadowNode) =
 
                 printfn "new props for component %A" shadowChild
 
-                //ignore()
+                shadowNode.Children <- [traverseTree shadowChild]
+                shadowNode.CurrentProps <- newProps
 
-                traverseTree shadowChild
-
-                //shadowNode.Children <- [traverseTree shadowChild]
-                //shadowNode.CurrentProps <- newProps
-
-                //let childrenJson = JsonConvert.SerializeObject(shadowNode.Children |> List.map (fun child -> child.Id))
-
-                //setChildren(shadowNode.Id, childrenJson)
-
-                ignore()
-
-                //ignore()
-
-            //shadowNode.CurrentProps <- newProps
+                WidgetRegistrationService.linkChildren(shadowNode.Id, shadowNode.Children |> List.map (fun child -> child.Id))
 
             ignore()
         ))

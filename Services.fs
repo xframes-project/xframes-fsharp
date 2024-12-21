@@ -1,5 +1,7 @@
 ﻿module Services
 open Newtonsoft.Json
+open System
+open System.Reactive.Linq
 open System.Reactive.Subjects
 open System.Threading
 open System.Collections.Generic
@@ -10,6 +12,10 @@ open WidgetNodeJsonAdapter
 module WidgetRegistrationService =
     let idGeneratorLock = new ReaderWriterLockSlim()
     let idRegistrationLock = new ReaderWriterLockSlim()
+
+    let eventsSubject = new ReplaySubject<unit -> unit>(10)
+
+    eventsSubject.Throttle(TimeSpan.FromMilliseconds(1.0)).Subscribe(fun fn -> fn())
 
     // Widget registry
     let widgetRegistry = new Dictionary<int, RawWidgetNodeWithId>()
@@ -58,25 +64,19 @@ module WidgetRegistrationService =
         match onClickRegistry.Value.TryFind id with
         | Some fn -> 
             printfn "About to invoke onClick fn for widget %d" id
-            fn()
+            eventsSubject.OnNext(fun () -> fn())
+            //fn()
         | None -> printfn "No event handler for ID %d" id
 
     let createWidget(widget: RawChildlessWidgetNodeWithId) =
         let json = JsonConvert.SerializeObject(jsonAdapter.ToJson(widget))
-        printfn "%s" json
-        printfn "Native call on thread %d" System.Threading.Thread.CurrentThread.ManagedThreadId
         setElement(json)
-        printfn "after"
 
     let patchWidget (Id: int, data: Map<string, obj>) =
-        printfn "before"
         patchElement(Id, JsonConvert.SerializeObject(data));
-        printfn "after"
 
     let linkChildren(Id: int, Ids: int list) =
-        printfn "before"
         setChildren(Id, JsonConvert.SerializeObject(Ids))
-        printfn "after"
 
     let getStyle () =
         // Assuming `xFramesWrapper` has a method `getStyle()`
