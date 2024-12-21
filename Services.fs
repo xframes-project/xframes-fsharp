@@ -15,7 +15,10 @@ module WidgetRegistrationService =
 
     let eventsSubject = new ReplaySubject<unit -> unit>(10)
 
-    eventsSubject.Throttle(TimeSpan.FromMilliseconds(1.0)).Subscribe(fun fn -> fn())
+    eventsSubject
+        // throttling is CRUCIAL as the C++ layer sends events synchronously
+        .Throttle(TimeSpan.FromMilliseconds(1.0))
+        .Subscribe(fun fn -> fn())
 
     // Widget registry
     let widgetRegistry = new Dictionary<int, RawWidgetNodeWithId>()

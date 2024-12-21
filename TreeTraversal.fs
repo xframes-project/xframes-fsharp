@@ -107,8 +107,6 @@ and traverseTree(root: Renderable): ShadowNode =
 
         WidgetRegistrationService.createWidget(rawNode)
 
-        printfn "after setElement()"
-
         let shadowChildren = 
             children |> List.map (fun child -> traverseTree child)
 
