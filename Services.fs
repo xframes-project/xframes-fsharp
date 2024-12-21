@@ -5,6 +5,7 @@ open System.Threading
 open System.Collections.Generic
 open Externs
 open Types
+open WidgetNodeJsonAdapter
 
 module WidgetRegistrationService =
     let idGeneratorLock = new ReaderWriterLockSlim()
@@ -59,6 +60,23 @@ module WidgetRegistrationService =
             printfn "About to invoke onClick fn for widget %d" id
             fn()
         | None -> printfn "No event handler for ID %d" id
+
+    let createWidget(widget: RawChildlessWidgetNodeWithId) =
+        let json = JsonConvert.SerializeObject(jsonAdapter.ToJson(widget))
+        printfn "%s" json
+        printfn "Native call on thread %d" System.Threading.Thread.CurrentThread.ManagedThreadId
+        setElement(json)
+        printfn "after"
+
+    let patchWidget (Id: int, data: Map<string, obj>) =
+        printfn "before"
+        patchElement(Id, JsonConvert.SerializeObject(data));
+        printfn "after"
+
+    let linkChildren(Id: int, Ids: int list) =
+        printfn "before"
+        setChildren(Id, JsonConvert.SerializeObject(Ids))
+        printfn "after"
 
     let getStyle () =
         // Assuming `xFramesWrapper` has a method `getStyle()`

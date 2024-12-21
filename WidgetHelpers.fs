@@ -1,17 +1,19 @@
 ﻿module WidgetHelpers
 
+open System.Security.Cryptography
+open System.Text
 open System.Reactive.Subjects
 open Types
 open Services
 
-let createWidgetNode(widgetType: string, initialProps: Map<string, obj>, initialChildren: WidgetNode list) : WidgetNode =
+let createWidgetNode(widgetType: string, initialProps: Map<string, obj>, initialChildren: Renderable list) : WidgetNode =
     { 
         Type = widgetType; 
         Props = new BehaviorSubject<Map<string, obj>>(initialProps); 
-        Children = new BehaviorSubject<WidgetNode list>(initialChildren) 
+        Children = new BehaviorSubject<Renderable list>(initialChildren) 
     }
 
-let createRawWidgetNode(widgetType: string, initialProps: 'T, initialChildren: RawWidgetNode list) : RawWidgetNode =
+let createRawWidgetNode(widgetType: string, initialProps: Map<string, obj>, initialChildren: RawWidgetNode list) : RawWidgetNode =
     { 
         Type = widgetType; 
         Props = initialProps; 
@@ -45,11 +47,11 @@ let createRawChildlessWidgetNodeWithId(id: int, widgetType: string, initialProps
 let createWidgetNodeFromRawWidgetNode (rawWidgetNode: RawWidgetNode) =
     createWidgetNode(rawWidgetNode.Type, rawWidgetNode.Props, [])
 
-let widgetNodeFactory (widgetType: string, props: Map<string, obj>, children: WidgetNode list) =
+let widgetNodeFactory (widgetType: string, props: Map<string, obj>, children: Renderable list) =
     {
         Type = widgetType
         Props = new BehaviorSubject<Map<string, obj>>(props)
-        Children = new BehaviorSubject<WidgetNode list>(children)
+        Children = new BehaviorSubject<Renderable list>(children)
     }
 
 module PropsHelper =
@@ -65,3 +67,17 @@ module PropsHelper =
         match tryGet<'T>(key, props) with
         | Some value -> value
         | None -> failwithf "Missing or invalid prop: %s" key
+
+let computeHash (componentType: string, props: Map<string, obj>) =
+    let propsString = 
+        props
+        |> Map.toSeq
+        |> Seq.map (fun (key, value) -> sprintf "%s:%O" key value)
+        |> String.concat ";"
+
+    let input = sprintf "%s|%s" componentType propsString
+    use sha256 = SHA256.Create()
+    let bytes = Encoding.UTF8.GetBytes(input)
+    sha256.ComputeHash(bytes)
+    |> Array.map (fun b -> b.ToString("x2"))
+    |> String.concat ""

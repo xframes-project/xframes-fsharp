@@ -8,7 +8,7 @@ open Types
 
 let sampleAppState = new BehaviorSubject<AppState>({ Text = "Hello..."; Count = 1 })
 
-type App() as this =
+type App() =
     inherit BaseComponent()
 
     let onClick() =
@@ -35,13 +35,35 @@ type App() as this =
         printfn "Rendering SampleApp"
 
         let textNodes = 
-            [ for _ in 1 .. sampleAppState.Value.Count -> unformattedText sampleAppState.Value.Text ]
+            [ for _ in 1 .. sampleAppState.Value.Count -> 
+                Renderable.WidgetNode(unformattedText sampleAppState.Value.Text)
+            ]
 
         let children = 
-            [ button("Add text", Some onClick) ] @ textNodes
+            [ Renderable.WidgetNode(button("Add text", Some onClick)) ] @ textNodes
 
         WidgetNode (
-            makeRootNode children
+            node children
+        )
+
+    member val sub: IDisposable option = None with get, set
+
+type Root() =
+    inherit BaseComponent()
+
+    override this.Init() =
+        ignore()
+
+    override this.Destroy() =
+        ignore()
+
+    override this.Render() =
+        printfn "Rendering Root"
+
+        let ret: BaseComponent = App()
+
+        WidgetNode (
+            makeRootNode [(BaseComponent ret)]
         )
 
     member val sub: IDisposable option = None with get, set

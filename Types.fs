@@ -29,13 +29,6 @@ type RawChildlessWidgetNodeWithId = {
     Props: Map<string, obj>
 }
 
-type WidgetNode = 
-    { 
-        Type: string
-        Props: BehaviorSubject<Map<string, obj>>
-        Children: BehaviorSubject<WidgetNode list> 
-    }
-
 [<AbstractClass>]
 type BaseComponent() =
     member val Props = new BehaviorSubject<Map<string, obj>>(Map.empty) with get, set
@@ -47,6 +40,13 @@ type BaseComponent() =
 and Renderable =
     | BaseComponent of BaseComponent
     | WidgetNode of WidgetNode
+
+and WidgetNode = 
+    { 
+        Type: string
+        Props: BehaviorSubject<Map<string, obj>>
+        Children: BehaviorSubject<Renderable list> 
+    }
 
 type Theme2(colorsDict: Dictionary<int, List<obj>>) =
     member val colors = colorsDict with get, set

@@ -60,8 +60,8 @@ let main argv =
 
     let onInitLogic () =
 
-        let app = App()
-        let shadowTree = traverseTree (BaseComponent (app))
+        let root = Root()
+        let shadowTree = traverseTree (BaseComponent (root))
 
         //printfn "shadowTree: %A" shadowTree
 

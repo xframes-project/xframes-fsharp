@@ -6,8 +6,6 @@ open System.Reactive.Subjects
 open Newtonsoft.Json
 open Types
 open Services
-open Externs
-open WidgetNodeJsonAdapter
 open WidgetHelpers
 open TreeDiffing
 
@@ -31,39 +29,28 @@ let rec subscribeToPropsHelper (shadowNode: ShadowNode) =
             printfn "new props for component %A" newProps
 
             if arePropsDifferent(shadowNode.CurrentProps, newProps) then
-                printfn "Yes, different"
+                printfn "Yes, different: %A %A" shadowNode.CurrentProps newProps
 
-                let shallowRenderableOuput = component.Render()
-                
-                match shallowRenderableOuput with
-                | BaseComponent _baseComponent -> ignore()
-                | WidgetNode widgetNode -> 
-                    //let itemDiffs =
-                    //    [0 .. max shadowNode.Children.Length widgetNode.Children.Value.Length - 1]
-                    //    |> List.choose (fun i ->
-                    //        match List.tryItem i shadowNode.Children, List.tryItem i widgetNode.Children.Value with
-                    //        | Some c1, Some c2 ->
-                    //            if c1.Type <> c2.Type then
-                    //                // type mismatch
-                    //                ignore()
-                    //            None
-                    //        | Some c1, None -> Some { Name = sprintf "Child[%d]" i; Diff = Diff.Value(c1, null) }
-                    //        | None, Some c2 -> Some { Name = sprintf "Child[%d]" i; Diff = Diff.Value(null, c2) }
-                    //        | None, None -> None
-                    //    )
-                    ignore()
+                let shadowChild = component.Render()
 
-                
+                printfn "new props for component %A" shadowChild
 
-                for childShadowNode in shadowNode.Children do
-                    childShadowNode.Renderable
+                //ignore()
 
-                match shallowRenderableOuput with
-                | BaseComponent component -> ignore()
-                | WidgetNode widgetNode -> ignore()
+                traverseTree shadowChild
 
+                //shadowNode.Children <- [traverseTree shadowChild]
+                //shadowNode.CurrentProps <- newProps
 
-            shadowNode.CurrentProps <- newProps
+                //let childrenJson = JsonConvert.SerializeObject(shadowNode.Children |> List.map (fun child -> child.Id))
+
+                //setChildren(shadowNode.Id, childrenJson)
+
+                ignore()
+
+                //ignore()
+
+            //shadowNode.CurrentProps <- newProps
 
             ignore()
         ))
@@ -71,20 +58,14 @@ let rec subscribeToPropsHelper (shadowNode: ShadowNode) =
         shadowNode.PropsChangeSubscription <- Some(widgetNode.Props.Skip(1).Subscribe(fun newProps ->
             printfn "new props for widget node %A" newProps
 
-            patchElement(shadowNode.Id, JsonConvert.SerializeObject(newProps));
+            WidgetRegistrationService.patchWidget(shadowNode.Id, newProps)
 
             shadowNode.CurrentProps <- newProps
 
             ignore()
-            
-            //let newChildren = widgetNode.Children.Value
-            //let newShadowChildren = 
-            //    newChildren |> List.map (fun child -> traverseTree (WidgetNode child))
-
-            //shadowNode.Children <- newShadowChildren
         ))
 
-let rec updateTree(root: Renderable) =
+and updateTree(root: Renderable) =
     match root with
     | BaseComponent component ->
         ignore()
@@ -122,6 +103,8 @@ and traverseTree(root: Renderable): ShadowNode =
         shadowNode.Children <- [shadowChild]
         shadowNode.CurrentProps <- component.Props.Value
 
+        printfn "shadowNode.CurrentProps %A" component.Props.Value
+
         shadowNode.Init()
 
         shadowNode
@@ -130,25 +113,21 @@ and traverseTree(root: Renderable): ShadowNode =
         // Extract children and props for the WidgetNode
         let children = widgetNode.Children.Value
         let id = WidgetRegistrationService.getNextWidgetId()
-
         let rawNode = createRawChildlessWidgetNodeWithId(id, widgetNode.Type, widgetNode.Props.Value)
-
-        let json = jsonAdapter.ToJson(rawNode)
-        let jsonString = JsonConvert.SerializeObject(json)
 
         handleWidgetNode(rawNode)
 
-        setElement(jsonString)
+        WidgetRegistrationService.createWidget(rawNode)
+
+        printfn "after setElement()"
 
         let shadowChildren = 
-            children |> List.map (fun child -> traverseTree (WidgetNode child))
+            children |> List.map (fun child -> traverseTree child)
 
         let childrenIds =
             shadowChildren |> List.map (fun shadowChild -> shadowChild.Id)
 
-        let childrenJson = JsonConvert.SerializeObject(childrenIds)
-
-        setChildren(id, childrenJson)
+        WidgetRegistrationService.linkChildren(id, childrenIds)
 
         let shadowNode = ShadowNode(id, widgetNode.Type, WidgetNode widgetNode, subscribeToPropsHelper)
         shadowNode.Children <- List.rev shadowChildren

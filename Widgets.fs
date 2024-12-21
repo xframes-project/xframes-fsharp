@@ -6,12 +6,12 @@ open WidgetHelpers
 
 
 
-let makeRootNode (children: WidgetNode list) =
+let makeRootNode (children: Renderable list) =
     let props = Map.ofList [("root", box true)]
     widgetNodeFactory(WidgetTypes.Node, props, children)
 
-let node (children: WidgetNode list) =
-    let props = Map.ofList []
+let node (children: Renderable list) =
+    let props = Map.ofList [("root", box false)]
     widgetNodeFactory(WidgetTypes.Node, props, children)
 
 let unformattedText (text: string) =
@@ -35,12 +35,12 @@ let rec normalizeRawWidgetNodeWithIdTree(node: RawWidgetNodeWithId): RawWidgetNo
         Children = node.Children |> List.map normalizeRawWidgetNodeWithIdTree
     }
 
-let rec normalizeWidgetNodeTree(node: WidgetNode): RawWidgetNode =
-    {
-        Type = node.Type
-        Props = node.Props.Value
-        Children = node.Children.Value |> List.map normalizeWidgetNodeTree
-    }
+//let rec normalizeWidgetNodeTree(node: WidgetNode): RawWidgetNode =
+//    {
+//        Type = node.Type
+//        Props = node.Props.Value
+//        Children = node.Children.Value |> List.map normalizeWidgetNodeTree
+//    }
 
 
 
