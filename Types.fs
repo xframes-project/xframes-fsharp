@@ -5,27 +5,33 @@ open System.Reactive.Subjects
 open System
 
 type WidgetTypes =
-    static member Component = "component"
-    static member Node = "node"
-    static member UnformattedText = "unformatted-text"
-    static member Button = "di-button"
+    | Component
+    | Node
+    | UnformattedText
+    | Button
+    member this.ToString() =
+        match this with
+        | Component -> "component"
+        | Node -> "node"
+        | UnformattedText -> "unformatted-text"
+        | Button -> "di-button"
 
 type RawWidgetNode = {
-    Type: string
+    Type: WidgetTypes
     Props: Map<string, obj>
     mutable Children: RawWidgetNode list
 }
 
 type RawWidgetNodeWithId = {
     Id: int
-    Type: string
+    Type: WidgetTypes
     Props: Map<string, obj>
     mutable Children: RawWidgetNodeWithId list
 }
 
 type RawChildlessWidgetNodeWithId = {
     Id: int
-    Type: string
+    Type: WidgetTypes
     Props: Map<string, obj>
 }
 
@@ -43,7 +49,7 @@ and Renderable =
 
 and WidgetNode = 
     { 
-        Type: string
+        Type: WidgetTypes
         Props: BehaviorSubject<Map<string, obj>>
         Children: BehaviorSubject<Renderable list> 
     }

@@ -9,9 +9,9 @@ open Services
 open WidgetHelpers
 open TreeDiffing
 
-type ShadowNode(id: int, renderableType: string, renderable: Renderable, subscribeToProps: ShadowNode -> unit) = 
+type ShadowNode(id: int, renderableType: WidgetTypes, renderable: Renderable, subscribeToProps: ShadowNode -> unit) = 
     member val Id: int = id with get
-    member val Type: string = renderableType with get
+    member val Type: WidgetTypes = renderableType with get
     member val Renderable = renderable
     member val CurrentProps = Map.empty with get, set
     member val Children: ShadowNode list = [] with get, set

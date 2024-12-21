@@ -6,14 +6,14 @@ open System.Reactive.Subjects
 open Types
 open Services
 
-let createWidgetNode(widgetType: string, initialProps: Map<string, obj>, initialChildren: Renderable list) : WidgetNode =
+let createWidgetNode(widgetType: WidgetTypes, initialProps: Map<string, obj>, initialChildren: Renderable list) : WidgetNode =
     { 
         Type = widgetType; 
         Props = new BehaviorSubject<Map<string, obj>>(initialProps); 
         Children = new BehaviorSubject<Renderable list>(initialChildren) 
     }
 
-let createRawWidgetNode(widgetType: string, initialProps: Map<string, obj>, initialChildren: RawWidgetNode list) : RawWidgetNode =
+let createRawWidgetNode(widgetType: WidgetTypes, initialProps: Map<string, obj>, initialChildren: RawWidgetNode list) : RawWidgetNode =
     { 
         Type = widgetType; 
         Props = initialProps; 
@@ -28,7 +28,7 @@ let rec createRawWidgetNodeWithIdFromRawWidgetNodeWithoutId (rawWidgetNode: RawW
         Children = rawWidgetNode.Children |> List.map createRawWidgetNodeWithIdFromRawWidgetNodeWithoutId
     }
 
-let createRawWidgetNodeWithId(id: int, widgetType: string, initialProps: Map<string, obj>, initialChildren: RawWidgetNode list) : RawWidgetNodeWithId =
+let createRawWidgetNodeWithId(id: int, widgetType: WidgetTypes, initialProps: Map<string, obj>, initialChildren: RawWidgetNode list) : RawWidgetNodeWithId =
     { 
         Id = id
         Type = widgetType 
@@ -37,7 +37,7 @@ let createRawWidgetNodeWithId(id: int, widgetType: string, initialProps: Map<str
     }
 
 // todo: rename!
-let createRawChildlessWidgetNodeWithId(id: int, widgetType: string, initialProps: Map<string, obj>) : RawChildlessWidgetNodeWithId =
+let createRawChildlessWidgetNodeWithId(id: int, widgetType: WidgetTypes, initialProps: Map<string, obj>) : RawChildlessWidgetNodeWithId =
     { 
         Id = id
         Type = widgetType 
@@ -47,7 +47,7 @@ let createRawChildlessWidgetNodeWithId(id: int, widgetType: string, initialProps
 let createWidgetNodeFromRawWidgetNode (rawWidgetNode: RawWidgetNode) =
     createWidgetNode(rawWidgetNode.Type, rawWidgetNode.Props, [])
 
-let widgetNodeFactory (widgetType: string, props: Map<string, obj>, children: Renderable list) =
+let widgetNodeFactory (widgetType: WidgetTypes, props: Map<string, obj>, children: Renderable list) =
     {
         Type = widgetType
         Props = new BehaviorSubject<Map<string, obj>>(props)
