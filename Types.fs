@@ -37,15 +37,15 @@ type WidgetNode =
     }
 
 [<AbstractClass>]
-type BaseComponent<'T>() =
-    member val Props = new BehaviorSubject<'T>(Unchecked.defaultof<'T>) with get, set
+type BaseComponent() =
+    member val Props = new BehaviorSubject<Map<string, obj>>(Map.empty) with get, set
 
     abstract member Init: unit -> unit
     abstract member Destroy: unit -> unit
-    abstract member Render: unit -> Renderable<'T>
+    abstract member Render: unit -> Renderable
 
-and Renderable<'T> =
-    | BaseComponent of BaseComponent<'T>
+and Renderable =
+    | BaseComponent of BaseComponent
     | WidgetNode of WidgetNode
 
 type Theme2(colorsDict: Dictionary<int, List<obj>>) =

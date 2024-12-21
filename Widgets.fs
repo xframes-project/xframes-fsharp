@@ -28,14 +28,14 @@ let button (label: string, onClick: (unit -> unit) option) =
         ]
     widgetNodeFactory(WidgetTypes.Button, props, [])
 
-let rec normalizeRawWidgetNodeWithIdTree (node: RawWidgetNodeWithId): RawWidgetNode =
+let rec normalizeRawWidgetNodeWithIdTree(node: RawWidgetNodeWithId): RawWidgetNode =
     {
         Type = node.Type
         Props = node.Props
         Children = node.Children |> List.map normalizeRawWidgetNodeWithIdTree
     }
 
-let rec normalizeWidgetNodeTree (node: WidgetNode): RawWidgetNode =
+let rec normalizeWidgetNodeTree(node: WidgetNode): RawWidgetNode =
     {
         Type = node.Type
         Props = node.Props.Value

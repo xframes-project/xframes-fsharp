@@ -11,7 +11,7 @@ let createWidgetNode(widgetType: string, initialProps: Map<string, obj>, initial
         Children = new BehaviorSubject<WidgetNode list>(initialChildren) 
     }
 
-let createRawWidgetNode (widgetType: string, initialProps: Map<string, obj>, initialChildren: RawWidgetNode list) : RawWidgetNode =
+let createRawWidgetNode(widgetType: string, initialProps: 'T, initialChildren: RawWidgetNode list) : RawWidgetNode =
     { 
         Type = widgetType; 
         Props = initialProps; 
@@ -26,7 +26,7 @@ let rec createRawWidgetNodeWithIdFromRawWidgetNodeWithoutId (rawWidgetNode: RawW
         Children = rawWidgetNode.Children |> List.map createRawWidgetNodeWithIdFromRawWidgetNodeWithoutId
     }
 
-let createRawWidgetNodeWithId (id: int, widgetType: string, initialProps: Map<string, obj>, initialChildren: RawWidgetNode list) : RawWidgetNodeWithId =
+let createRawWidgetNodeWithId(id: int, widgetType: string, initialProps: Map<string, obj>, initialChildren: RawWidgetNode list) : RawWidgetNodeWithId =
     { 
         Id = id
         Type = widgetType 
@@ -35,7 +35,7 @@ let createRawWidgetNodeWithId (id: int, widgetType: string, initialProps: Map<st
     }
 
 // todo: rename!
-let createRawChildlessWidgetNodeWithId (id: int, widgetType: string, initialProps: Map<string, obj>) : RawChildlessWidgetNodeWithId =
+let createRawChildlessWidgetNodeWithId(id: int, widgetType: string, initialProps: Map<string, obj>) : RawChildlessWidgetNodeWithId =
     { 
         Id = id
         Type = widgetType 
@@ -45,19 +45,23 @@ let createRawChildlessWidgetNodeWithId (id: int, widgetType: string, initialProp
 let createWidgetNodeFromRawWidgetNode (rawWidgetNode: RawWidgetNode) =
     createWidgetNode(rawWidgetNode.Type, rawWidgetNode.Props, [])
 
-let updateProps (widget: WidgetNode) key value =
-    let newProps = widget.Props.Value.Add(key, value)
-    widget.Props.OnNext(newProps)
-
-let observeProps (widget: WidgetNode) =
-    widget.Props.Subscribe(fun newProps ->
-        printfn "Props updated: %A" newProps
-    )
-
-
 let widgetNodeFactory (widgetType: string, props: Map<string, obj>, children: WidgetNode list) =
     {
         Type = widgetType
-        Props = new System.Reactive.Subjects.BehaviorSubject<Map<string, obj>>(props)
-        Children = new System.Reactive.Subjects.BehaviorSubject<WidgetNode list>(children)
+        Props = new BehaviorSubject<Map<string, obj>>(props)
+        Children = new BehaviorSubject<WidgetNode list>(children)
     }
+
+module PropsHelper =
+    let tryGet<'T>(key: string, props: Map<string, obj>) : 'T option =
+        match props.TryFind(key) with
+        | Some value -> 
+            match value :?> 'T with
+            | value -> Some value
+            | _ -> None
+        | None -> None
+
+    let get<'T>(key: string, props: Map<string, obj>) : 'T =
+        match tryGet<'T>(key, props) with
+        | Some value -> value
+        | None -> failwithf "Missing or invalid prop: %s" key

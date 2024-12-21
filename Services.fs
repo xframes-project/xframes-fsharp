@@ -25,7 +25,7 @@ module WidgetRegistrationService =
         // Return widget from registry by ID
         if widgetRegistry.ContainsKey(id) then Some(widgetRegistry.[id]) else None
 
-    let registerWidget (id: int, widget: RawWidgetNodeWithId) =
+    let registerWidget(id: int, widget: RawWidgetNodeWithId) =
         idRegistrationLock.EnterWriteLock()
         try
             widgetRegistry.[id] <- widget

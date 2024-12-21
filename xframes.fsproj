@@ -14,7 +14,6 @@
 	<Compile Include="WidgetHelpers.fs" />
     <Compile Include="Widgets.fs" />
     <Compile Include="WidgetNodeJsonAdapter.fs" />
-    <Compile Include="Applier.fs" />
     <Compile Include="TreeDiffing.fs" />
     <Compile Include="TreeTraversal.fs" />
     <Compile Include="SampleApp.fs" />

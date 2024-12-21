@@ -9,34 +9,71 @@ open Services
 open Externs
 open WidgetNodeJsonAdapter
 open WidgetHelpers
+open TreeDiffing
 
-type ShadowNode<'T>(id: int, renderable: Renderable<'T>, subscribeToProps: ShadowNode<'T> -> unit) = 
+type ShadowNode(id: int, renderableType: string, renderable: Renderable, subscribeToProps: ShadowNode -> unit) = 
     member val Id: int = id with get
+    member val Type: string = renderableType with get
     member val Renderable = renderable
-    member val Children: ShadowNode<'T> list = [] with get, set
+    member val CurrentProps = Map.empty with get, set
+    member val Children: ShadowNode list = [] with get, set
     member val PropsChangeSubscription: IDisposable option = None with get, set
     member val ChildrenChangeSubscription: IDisposable option = None with get, set
 
     member this.Init() =
         subscribeToProps this
 
-let rec subscribeToPropsHelper<'T> (shadowNode: ShadowNode<'T>) =
+
+let rec subscribeToPropsHelper (shadowNode: ShadowNode) =
     match shadowNode.Renderable with
     | BaseComponent component ->
         shadowNode.PropsChangeSubscription <- Some(component.Props.Skip(1).Subscribe(fun newProps ->
             printfn "new props for component %A" newProps
 
-            // can't call traverseTree just like that, as `component` has already been processed, we just need
-            // to invoke patchElement() using the new props, then process the children and look for differences
+            if arePropsDifferent(shadowNode.CurrentProps, newProps) then
+                printfn "Yes, different"
 
-            //let newChild = traverseTree(component.Render())
-            //shadowNode.Children <- [newChild]
+                let shallowRenderableOuput = component.Render()
+                
+                match shallowRenderableOuput with
+                | BaseComponent _baseComponent -> ignore()
+                | WidgetNode widgetNode -> 
+                    //let itemDiffs =
+                    //    [0 .. max shadowNode.Children.Length widgetNode.Children.Value.Length - 1]
+                    //    |> List.choose (fun i ->
+                    //        match List.tryItem i shadowNode.Children, List.tryItem i widgetNode.Children.Value with
+                    //        | Some c1, Some c2 ->
+                    //            if c1.Type <> c2.Type then
+                    //                // type mismatch
+                    //                ignore()
+                    //            None
+                    //        | Some c1, None -> Some { Name = sprintf "Child[%d]" i; Diff = Diff.Value(c1, null) }
+                    //        | None, Some c2 -> Some { Name = sprintf "Child[%d]" i; Diff = Diff.Value(null, c2) }
+                    //        | None, None -> None
+                    //    )
+                    ignore()
+
+                
+
+                for childShadowNode in shadowNode.Children do
+                    childShadowNode.Renderable
+
+                match shallowRenderableOuput with
+                | BaseComponent component -> ignore()
+                | WidgetNode widgetNode -> ignore()
+
+
+            shadowNode.CurrentProps <- newProps
 
             ignore()
         ))
     | WidgetNode widgetNode ->
         shadowNode.PropsChangeSubscription <- Some(widgetNode.Props.Skip(1).Subscribe(fun newProps ->
             printfn "new props for widget node %A" newProps
+
+            patchElement(shadowNode.Id, JsonConvert.SerializeObject(newProps));
+
+            shadowNode.CurrentProps <- newProps
 
             ignore()
             
@@ -47,24 +84,30 @@ let rec subscribeToPropsHelper<'T> (shadowNode: ShadowNode<'T>) =
             //shadowNode.Children <- newShadowChildren
         ))
 
-and handleComponent<'T>(comp: BaseComponent<'T>) =
+let rec updateTree(root: Renderable) =
+    match root with
+    | BaseComponent component ->
+        ignore()
+
+    | WidgetNode widgetNode ->
+        ignore()
+
+and handleComponent(comp: BaseComponent) =
     ignore()
 
 and handleWidgetNode(widget: RawChildlessWidgetNodeWithId) =
     match widget.Type with
     | t when t = WidgetTypes.Button ->
-        match widget.Props.TryFind("onClick") with
-        | Some(onClickFunc) -> 
-            match onClickFunc with
-            | :? (unit -> unit) as onClickHandler -> 
-                WidgetRegistrationService.registerWidgetForOnClickEvent(widget.Id, onClickHandler)
-            | _ -> 
-                printfn "onClick handler is not of the expected type."
+        let onClick = PropsHelper.tryGet<unit -> unit>("onClick", widget.Props)
+
+        match onClick with
+        | Some handler -> 
+            WidgetRegistrationService.registerWidgetForOnClickEvent(widget.Id, handler)
         | None -> 
-            printfn "No onClick handler found for button."
+            printfn "No onClick handler for button."
     | _ -> ()
 
-and traverseTree<'T>(root: Renderable<'T>): ShadowNode<'T> =
+and traverseTree(root: Renderable): ShadowNode =
     match root with
     | BaseComponent component ->
         component.Init()
@@ -75,8 +118,9 @@ and traverseTree<'T>(root: Renderable<'T>): ShadowNode<'T> =
 
         let shadowChild = traverseTree child
 
-        let shadowNode = ShadowNode(id, BaseComponent component, subscribeToPropsHelper)
+        let shadowNode = ShadowNode(id, WidgetTypes.Component, BaseComponent component, subscribeToPropsHelper)
         shadowNode.Children <- [shadowChild]
+        shadowNode.CurrentProps <- component.Props.Value
 
         shadowNode.Init()
 
@@ -106,8 +150,9 @@ and traverseTree<'T>(root: Renderable<'T>): ShadowNode<'T> =
 
         setChildren(id, childrenJson)
 
-        let shadowNode = ShadowNode(id, WidgetNode widgetNode, subscribeToPropsHelper)
+        let shadowNode = ShadowNode(id, widgetNode.Type, WidgetNode widgetNode, subscribeToPropsHelper)
         shadowNode.Children <- List.rev shadowChildren
+        shadowNode.CurrentProps <- widgetNode.Props.Value
 
         shadowNode.Init()
 

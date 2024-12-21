@@ -3,7 +3,7 @@
 open DEdge.Diffract
 open Types
 
-let rec arePropsDifferent (props1: Map<string, obj>) (props2: Map<string, obj>) =
+let rec arePropsDifferent (props1: Map<string, obj>, props2: Map<string, obj>) =
     props1 |> Seq.exists (fun kvp ->
         match props2.TryFind kvp.Key with
         | Some value -> value <> kvp.Value
@@ -18,7 +18,7 @@ let rec diffNodes (node1: RawWidgetNode, node2: RawWidgetNode) : Option<Diff> =
         Some(Diff.Value(node1.Type, node2.Type))
     
     // Compare the props
-    elif arePropsDifferent node1.Props node2.Props then
+    elif arePropsDifferent(node1.Props, node2.Props) then
         Some(Diff.Record [
             { Name = "Props"; Diff = Diff.Value(node1.Props, node2.Props) }
         ])

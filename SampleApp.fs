@@ -6,13 +6,13 @@ open System
 open Widgets
 open Types
 
-let sampleAppState = new BehaviorSubject<AppState>({ Text = "Hello, world"; Count = 1 })
+let sampleAppState = new BehaviorSubject<AppState>({ Text = "Hello..."; Count = 1 })
 
 type App() as this =
-    inherit BaseComponent<Map<string, obj>>()
+    inherit BaseComponent()
 
     let onClick() =
-        sampleAppState.OnNext({ Text = "Hello, world"; Count = sampleAppState.Value.Count + 1 })
+        sampleAppState.OnNext({ Text = "Hello, world!"; Count = sampleAppState.Value.Count + 1 })
 
     override this.Init() =
 
