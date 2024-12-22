@@ -10,12 +10,17 @@ open JsonAdapters
 open Newtonsoft.Json
 open StyleHelpers
 
-type AppState = {
+type TodoItem = {
     Text: string
-    Count: int
+    Done: bool
 }
 
-let sampleAppState = new BehaviorSubject<AppState>({ Text = "Hello..."; Count = 1 })
+type AppState = {
+    TodoText: string
+    TodoItems: TodoItem list
+}
+
+let sampleAppState = new BehaviorSubject<AppState>({ TodoText = ""; TodoItems = [] })
 
 let styleVars: (ImGuiStyleVar * StyleVarValue) list = [
     ImGuiStyleVar.WindowPadding, StyleVarValue.ImVec2(10.0, 10.0)
@@ -69,15 +74,21 @@ type App() =
     inherit BaseComponent()
 
     let onClick() =
-        sampleAppState.OnNext({ Text = "Hello, world!"; Count = sampleAppState.Value.Count + 1 })
+        let newTodoItem = { Text = "New Todo"; Done = false }
+
+        // Update the AppState with the new TodoItem appended
+        sampleAppState.OnNext({
+            TodoText = sampleAppState.Value.TodoText
+            TodoItems = List.append sampleAppState.Value.TodoItems [newTodoItem]
+        })
 
     override this.Init() =
 
         this.sub <- Some(sampleAppState.Subscribe(fun latestAppState -> 
             this.Props.OnNext(
                 Map.ofList [
-                    "text", latestAppState.Text :> obj
-                    "count", latestAppState.Count :> obj
+                    "TodoText", latestAppState.TodoText :> obj
+                    "TodoItems", latestAppState.TodoItems :> obj
                 ]
             )
         ))
@@ -89,13 +100,22 @@ type App() =
 
 
     override this.Render() =
-        let textNodes = 
-            [ for _ in 1 .. sampleAppState.Value.Count -> 
-                Renderable.WidgetNode(unformattedText sampleAppState.Value.Text)
-            ]
+        let textNodes =
+            match this.Props.Value.TryFind("TodoItems") with
+            | Some (value : obj) ->
+                match value :?> TodoItem list with
+                | todoItems ->
+                    [
+                        for todoItem in todoItems do
+                            Renderable.WidgetNode(
+                                unformattedText (sprintf "%s (%s)." todoItem.Text (if todoItem.Done then "done" else "to do"))
+                            )
+                    ]
+                | _ -> []  // Handle case where the cast fails
+            | None -> []
 
         let children = 
-            [ Renderable.WidgetNode(button("Add text", Some onClick)) ] @ textNodes
+            [ Renderable.WidgetNode(button("Add todo", Some onClick)) ] @ textNodes
 
         WidgetNode (
             node children
