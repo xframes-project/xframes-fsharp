@@ -369,7 +369,7 @@ type YogaStylePropertyKey =
 
 type YogaStyle = Map<YogaStylePropertyKey, YogaStyleProperty>
 
-let validatePropertyValue (key: YogaStylePropertyKey, value: YogaStyleProperty) : Result<unit, string> =
+let validateYogaPropertyValue (key: YogaStylePropertyKey, value: YogaStyleProperty) : Result<unit, string> =
     match key, value with
     | YogaStylePropertyKey.Direction, YogaStyleProperty.Direction _v -> Ok()
     | YogaStylePropertyKey.FlexDirection, YogaStyleProperty.FlexDirection _v -> Ok()
@@ -408,7 +408,73 @@ let validatePropertyValue (key: YogaStylePropertyKey, value: YogaStyleProperty) 
 let createYogaStyleWithValidation (properties: (YogaStylePropertyKey * YogaStyleProperty) list) : Result<YogaStyle, string> =
     properties
     |> List.fold (fun acc (key, value) ->
-        match validatePropertyValue(key, value) with
+        match validateYogaPropertyValue(key, value) with
+        | Ok () -> Map.add key value acc
+        | Error msg -> acc // Optionally log or throw error here
+    ) Map.empty
+    |> fun map ->
+        if map.Count = properties.Length then
+            Ok map
+        else
+            Error "One or more property values are invalid"
+
+type RoundCorners =
+    | All
+    | TopLeft
+    | TopRight
+    | BottomLeft
+    | BottomRight
+    override this.ToString() =
+        match this with
+        | All -> "all"
+        | TopLeft -> "topLeft"
+        | TopRight -> "topRight"
+        | BottomLeft -> "bottomLeft"
+        | BottomRight -> "bottomRight"
+
+type BorderStyle = {
+    Color: StyleColValue
+    Thickness: float option
+}
+
+type BaseDrawStyleProperty =
+    | BackgroundColor of StyleColValue
+    | Border of BorderStyle
+    | BorderTop of BorderStyle
+    | BorderRight of BorderStyle
+    | BorderBottom of BorderStyle
+    | BorderLeft of BorderStyle
+    | Rounding of float
+    | RoundCorners of RoundCorners list
+
+type BaseDrawStylePropertyKey =
+    | BackgroundColor
+    | Border
+    | BorderTop
+    | BorderRight
+    | BorderBottom
+    | BorderLeft
+    | Rounding
+    | RoundCorners
+
+type BaseDrawStyle = Map<BaseDrawStylePropertyKey, BaseDrawStyleProperty>
+
+let validateBaseDrawPropertyValue (key: BaseDrawStylePropertyKey, value: BaseDrawStyleProperty) : Result<unit, string> =
+    match key, value with
+    | BaseDrawStylePropertyKey.BackgroundColor, BaseDrawStyleProperty.BackgroundColor _v -> Ok()
+    | BaseDrawStylePropertyKey.Border, BaseDrawStyleProperty.Border _v -> Ok()
+    | BaseDrawStylePropertyKey.BorderTop, BaseDrawStyleProperty.BorderTop _v -> Ok()
+    | BaseDrawStylePropertyKey.BorderRight, BaseDrawStyleProperty.BorderRight _v -> Ok()
+    | BaseDrawStylePropertyKey.BorderBottom, BaseDrawStyleProperty.BorderBottom _v -> Ok()
+    | BaseDrawStylePropertyKey.BorderLeft, BaseDrawStyleProperty.BorderLeft _v -> Ok()
+    | BaseDrawStylePropertyKey.Rounding, BaseDrawStyleProperty.Rounding f when f >= 0.0 -> Ok()
+    | BaseDrawStylePropertyKey.RoundCorners, BaseDrawStyleProperty.RoundCorners _v -> Ok()
+    | _ -> Error "Invalid property value"
+
+let createBaseDrawStyleWithValidation (properties: (BaseDrawStylePropertyKey * BaseDrawStyleProperty) list) : Result<BaseDrawStyle, string> =
+    properties
+    |> List.fold (fun acc (key, value) ->
+        match validateBaseDrawPropertyValue(key, value) with
         | Ok () -> Map.add key value acc
         | Error msg -> acc // Optionally log or throw error here
     ) Map.empty

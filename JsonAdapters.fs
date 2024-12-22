@@ -24,6 +24,21 @@ module StyleJsonAdapter =
     let fromJson(json: Map<string, obj>) =
         ignore()
 
+    let styleColValueToJson (styleColValue: StyleColValue) : obj =
+        match styleColValue with
+        | HexString s -> box s
+        | HexaValue h -> [box (fst h), box (snd h)]
+
+    let borderStyleToJson (borderStyle: BorderStyle) : Map<string, obj> =
+        let baseData = Map.ofList [
+            "color", styleColValueToJson(borderStyle.Color)
+        ]
+
+        match borderStyle.Thickness with
+        | Some thickness -> Map.add "thickness" (box thickness) baseData
+        | None -> baseData
+            
+
     let yogaStylePropertyKeyToString (property: YogaStylePropertyKey): string =
         match property with
         | YogaStylePropertyKey.Direction -> "direction"
@@ -93,4 +108,36 @@ module StyleJsonAdapter =
         |> Map.fold (fun acc key value ->
             let keyString = yogaStylePropertyKeyToString key
             acc.Add(keyString, yogaStylePropertyToJsonValue value)
+        ) (Map.empty<string, obj>)
+
+    let baseDrawStylePropertyKeyToString (property: BaseDrawStylePropertyKey): string =
+        match property with
+        | BaseDrawStylePropertyKey.BackgroundColor -> "backgroundColor"
+        | BaseDrawStylePropertyKey.Border -> "border"
+        | BaseDrawStylePropertyKey.BorderTop -> "borderTop"
+        | BaseDrawStylePropertyKey.BorderRight -> "borderRight"
+        | BaseDrawStylePropertyKey.BorderBottom -> "borderBottom"
+        | BaseDrawStylePropertyKey.BorderLeft -> "borderLeft"
+        | BaseDrawStylePropertyKey.RoundCorners -> "roundCorners"
+        | BaseDrawStylePropertyKey.Rounding -> "rounding"
+
+    let baseDrawStylePropertyToJsonValue (property: BaseDrawStyleProperty): obj =
+        match property with
+        | BaseDrawStyleProperty.BackgroundColor b -> styleColValueToJson(b)
+        | BaseDrawStyleProperty.Border b -> borderStyleToJson(b)
+        | BaseDrawStyleProperty.BorderTop b -> borderStyleToJson(b)
+        | BaseDrawStyleProperty.BorderRight b -> borderStyleToJson(b)
+        | BaseDrawStyleProperty.BorderBottom b -> borderStyleToJson(b)
+        | BaseDrawStyleProperty.BorderLeft b-> borderStyleToJson(b)
+        | BaseDrawStyleProperty.RoundCorners r -> 
+            r 
+            |> List.map (fun item -> box (item.ToString())) 
+            |> box
+        | BaseDrawStyleProperty.Rounding r -> r
+
+    let baseDrawStyleToJson (yogaStyle: Map<BaseDrawStylePropertyKey, BaseDrawStyleProperty>) : Map<string, obj> =
+        yogaStyle
+        |> Map.fold (fun acc key value ->
+            let keyString = baseDrawStylePropertyKeyToString key
+            acc.Add(keyString, baseDrawStylePropertyToJsonValue value)
         ) (Map.empty<string, obj>)

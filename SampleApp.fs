@@ -24,18 +24,33 @@ let styleVars: (ImGuiStyleVar * StyleVarValue) list = [
 
 let styleVarsMap = makeStyleVars(styleVars)
 
-// Example usage:
-let styleProperties: (YogaStylePropertyKey * YogaStyleProperty) list = [
+let yogaStyleProperties: (YogaStylePropertyKey * YogaStyleProperty) list = [
     (YogaStylePropertyKey.Direction, YogaStyleProperty.Direction Ltr)
     (YogaStylePropertyKey.Flex, YogaStyleProperty.Flex 1.0)
     (YogaStylePropertyKey.Width, YogaStyleProperty.Width (Value 200.0))
     (YogaStylePropertyKey.Height, YogaStyleProperty.Height (Percentage "100%"))
 ]
 
-let styleResult = createYogaStyleWithValidation(styleProperties)
+let yogaStyleResult = createYogaStyleWithValidation(yogaStyleProperties)
 
-match styleResult with
+match yogaStyleResult with
 | Ok v -> printfn "%s" (JsonConvert.SerializeObject(StyleJsonAdapter.yogaStyleToJson(v)))
+
+let baseDrawStyleProperties: (BaseDrawStylePropertyKey * BaseDrawStyleProperty) list = [
+    (BaseDrawStylePropertyKey.BackgroundColor, BaseDrawStyleProperty.BackgroundColor (HexString "#fff"))
+    (BaseDrawStylePropertyKey.Border, BaseDrawStyleProperty.Border { Color = HexString "#fff"; Thickness = Some 1.0 })
+    (BaseDrawStylePropertyKey.BorderRight, BaseDrawStyleProperty.BorderRight { Color = HexString "#fff"; Thickness = None })
+    (BaseDrawStylePropertyKey.Rounding, BaseDrawStyleProperty.Rounding 1.0)
+    (BaseDrawStylePropertyKey.RoundCorners, BaseDrawStyleProperty.RoundCorners [RoundCorners.BottomLeft; RoundCorners.BottomRight])
+]
+
+let baseDrawStyleResult = createBaseDrawStyleWithValidation(baseDrawStyleProperties)
+
+match yogaStyleResult with
+| Ok v -> printfn "%s" (JsonConvert.SerializeObject(StyleJsonAdapter.yogaStyleToJson(v)))
+
+match baseDrawStyleResult with
+| Ok v -> printfn "%s" (JsonConvert.SerializeObject(StyleJsonAdapter.baseDrawStyleToJson(v)))
 
 type App() =
     inherit BaseComponent()
