@@ -31,6 +31,11 @@ module StyleJsonAdapter =
         | HexaValue (hex, alpha) -> 
             box [| box hex; box alpha |]
 
+    let styleVarValueToJson (styleVarValue: StyleVarValue) : obj =
+        match styleVarValue with
+        | Float f -> f
+        | ImVec2 (x, y) -> box [| box x; box y |]
+
     let borderStyleToJson (borderStyle: BorderStyle) : Map<string, obj> =
         let baseData = Map.ofList [
             "color", styleColValueToJson(borderStyle.Color)
@@ -173,6 +178,14 @@ module StyleJsonAdapter =
                 m 
                 |> Map.fold (fun acc key value -> Map.add (string (int key)) (styleColValueToJson value) acc) Map.empty
             baseData <- Map.add "colors" (box colorsJson) baseData
+        | None -> ignore()
+
+        match styleRules.Vars with
+        | Some v -> 
+            let varsJson = 
+                v 
+                |> Map.fold (fun acc key value -> Map.add (string (int key)) (styleVarValueToJson value) acc) Map.empty
+            baseData <- Map.add "vars" (box varsJson) baseData
         | None -> ignore()
 
         baseData

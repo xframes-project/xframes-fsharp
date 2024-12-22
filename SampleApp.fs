@@ -58,6 +58,7 @@ let s: StyleRules = {
     ])
     Vars = Some ( Map.ofList [
         ImGuiStyleVar.FramePadding, ImVec2 (2.0, 2.0)
+        ImGuiStyleVar.FrameRounding, Float 2.0
     ])
 }
 
