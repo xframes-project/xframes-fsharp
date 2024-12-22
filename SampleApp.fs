@@ -46,11 +46,28 @@ let baseDrawStyleProperties: (BaseDrawStylePropertyKey * BaseDrawStyleProperty) 
 
 let baseDrawStyleResult = createBaseDrawStyleWithValidation(baseDrawStyleProperties)
 
+let s: StyleRules = {
+    Align = Some(Align.Left)
+    Font = Some( { 
+        Name = "roboto-regular"
+        Size = 16
+    } )
+    Colors = Some( Map.ofList [
+        ImGuiCol.Text, HexString "#8899aa"
+        ImGuiCol.TitleBg, HexaValue ("#fff", 0.5)
+    ])
+    Vars = Some ( Map.ofList [
+        ImGuiStyleVar.FramePadding, ImVec2 (2.0, 2.0)
+    ])
+}
+
 match yogaStyleResult with
 | Ok v -> printfn "%s" (JsonConvert.SerializeObject(StyleJsonAdapter.yogaStyleToJson(v)))
 
 match baseDrawStyleResult with
 | Ok v -> printfn "%s" (JsonConvert.SerializeObject(StyleJsonAdapter.baseDrawStyleToJson(v)))
+
+printfn "%s" (JsonConvert.SerializeObject(StyleJsonAdapter.styleRulesToJson(s)))
 
 type App() =
     inherit BaseComponent()

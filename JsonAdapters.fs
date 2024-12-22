@@ -1,5 +1,6 @@
 ﻿module JsonAdapters
 
+open System.Collections.Generic
 open System.Reactive.Subjects
 open Types
 
@@ -27,7 +28,8 @@ module StyleJsonAdapter =
     let styleColValueToJson (styleColValue: StyleColValue) : obj =
         match styleColValue with
         | HexString s -> box s
-        | HexaValue h -> [box (fst h), box (snd h)]
+        | HexaValue (hex, alpha) -> 
+            box [| box hex; box alpha |]
 
     let borderStyleToJson (borderStyle: BorderStyle) : Map<string, obj> =
         let baseData = Map.ofList [
@@ -141,3 +143,36 @@ module StyleJsonAdapter =
             let keyString = baseDrawStylePropertyKeyToString key
             acc.Add(keyString, baseDrawStylePropertyToJsonValue value)
         ) (Map.empty<string, obj>)
+
+    let fontDefToJson (fontDef: FontDef) : Map<string, obj> =
+        Map.ofList [
+            "name", fontDef.Name
+            "size", fontDef.Size
+        ]
+
+    let fontDefsToJson (fontDefs: Dictionary<string, FontDef list>) : Dictionary<string, Map<string, obj> list> =
+        let fontsDictionary = new Dictionary<string, Map<string, obj> list>()
+        fontsDictionary.Add("defs", fontDefs["defs"] |> List.map fontDefToJson)
+
+        fontsDictionary
+
+    let styleRulesToJson (styleRules: StyleRules) : Map<string, obj> =
+        let mutable baseData: Map<string, obj> = Map.empty
+
+        match styleRules.Align with
+        | Some a -> baseData <- Map.add "align" (a.ToString()) baseData
+        | None -> ignore()
+
+        match styleRules.Font with
+        | Some f -> baseData <- Map.add "font" (fontDefToJson(f)) baseData
+        | None -> ignore()
+
+        match styleRules.Colors with
+        | Some m -> 
+            let colorsJson = 
+                m 
+                |> Map.fold (fun acc key value -> Map.add (string (int key)) (styleColValueToJson value) acc) Map.empty
+            baseData <- Map.add "colors" (box colorsJson) baseData
+        | None -> ignore()
+
+        baseData

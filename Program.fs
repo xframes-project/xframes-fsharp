@@ -9,6 +9,7 @@ open Types
 open Services
 open TreeTraversal
 open SampleApp
+open JsonAdapters
 
 // Record types for data structures
 type JsonSetData = { Op: string; Data: obj }
@@ -30,7 +31,7 @@ let fontDefs =
     let fontSizes = [16; 18; 20; 24; 28; 32; 36; 48]
     let fontName = "roboto-regular"
     fontSizes
-    |> List.map (fun size -> { name = fontName; size = size })
+    |> List.map (fun size -> { Name = fontName; Size = size })
 
 let fontsDictionary = new Dictionary<string, FontDef list>()
 fontsDictionary.Add("defs", fontDefs)
@@ -78,7 +79,7 @@ let main argv =
     let onBooleanValueChanged = Marshal.GetFunctionPointerForDelegate(Action(fun () -> printfn "Initialization callback called!"))
     let onMultipleNumericValuesChanged = Marshal.GetFunctionPointerForDelegate(Action(fun () -> printfn "Initialization callback called!"))
 
-    let fontDefsJson = JsonConvert.SerializeObject(fontsDictionary)
+    let fontDefsJson = JsonConvert.SerializeObject(StyleJsonAdapter.fontDefsToJson(fontsDictionary))
     let themeJson = JsonConvert.SerializeObject(colorsDict)
 
 

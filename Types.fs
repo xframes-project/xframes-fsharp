@@ -56,17 +56,13 @@ and WidgetNode =
     }
 
 type Theme2(colorsDict: Dictionary<int, List<obj>>) =
-    member val colors = colorsDict with get, set
+    member val Colors = colorsDict with get, set
 
 
 type FontDef = {
-    name: string
-    size: int
+    Name: string
+    Size: int
 }
-
-//type ImVec2 = float list
-
-//type ImVec2 = float * float
 
 type HEXA = string * float
 
@@ -87,10 +83,10 @@ type Align =
         | Right -> "right"
 
 type StyleRules = {
-    align: Align option
-    font: FontDef option
-    colors: Map<ImGuiCol, StyleColValue> option
-    vars: Map<ImGuiStyleVar, StyleVarValue> option
+    Align: Align option
+    Font: FontDef option
+    Colors: Map<ImGuiCol, StyleColValue> option
+    Vars: Map<ImGuiStyleVar, StyleVarValue> option
 }
 
 let styleVarsImVec2 : ImGuiStyleVar list = [
