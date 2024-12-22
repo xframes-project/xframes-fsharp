@@ -63,7 +63,4 @@ type FontDef = {
     size: int
 }
 
-type AppState = {
-    Text: string
-    Count: int
-}
+type ImVec2 = float list

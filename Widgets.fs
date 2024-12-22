@@ -35,12 +35,7 @@ let rec normalizeRawWidgetNodeWithIdTree(node: RawWidgetNodeWithId): RawWidgetNo
         Children = node.Children |> List.map normalizeRawWidgetNodeWithIdTree
     }
 
-//let rec normalizeWidgetNodeTree(node: WidgetNode): RawWidgetNode =
-//    {
-//        Type = node.Type
-//        Props = node.Props.Value
-//        Children = node.Children.Value |> List.map normalizeWidgetNodeTree
-//    }
+
 
 
 

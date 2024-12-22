@@ -6,6 +6,11 @@ open System
 open Widgets
 open Types
 
+type AppState = {
+    Text: string
+    Count: int
+}
+
 let sampleAppState = new BehaviorSubject<AppState>({ Text = "Hello..."; Count = 1 })
 
 type App() =
@@ -32,8 +37,6 @@ type App() =
 
 
     override this.Render() =
-        //printfn "Rendering SampleApp"
-
         let textNodes = 
             [ for _ in 1 .. sampleAppState.Value.Count -> 
                 Renderable.WidgetNode(unformattedText sampleAppState.Value.Text)
@@ -58,8 +61,6 @@ type Root() =
         ignore()
 
     override this.Render() =
-        //printfn "Rendering Root"
-
         let ret: BaseComponent = App()
 
         WidgetNode (

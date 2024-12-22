@@ -1,5 +1,7 @@
 ﻿module Enums
 
+open System
+
 type ImGuiCol =
     | Text = 0
     | TextDisabled = 1
@@ -55,3 +57,88 @@ type ImGuiCol =
     | NavWindowingDimBg = 51
     | ModalWindowDimBg = 52
     | COUNT = 53
+
+type ImPlotScale =
+    | Linear = 0
+    | Time = 1
+    | Log10 = 2
+    | SymLog = 3
+
+type ImPlotMarker =
+    | None = -1
+    | Circle = 0
+    | Square = 1
+    | Diamond = 2
+    | Up = 3
+    | Down = 4
+    | Left = 5
+    | Right = 6
+    | Cross = 7
+    | Plus = 8
+    | Asterisk = 9
+
+type ImGuiStyleVar =
+    | Alpha = 0 // float     Alpha
+    | DisabledAlpha = 1 // float     DisabledAlpha
+    | WindowPadding = 2 // ImVec2    WindowPadding
+    | WindowRounding = 3 // float     WindowRounding
+    | WindowBorderSize = 4 // float     WindowBorderSize
+    | WindowMinSize = 5 // ImVec2    WindowMinSize
+    | WindowTitleAlign = 6 // ImVec2    WindowTitleAlign
+    | ChildRounding = 7 // float     ChildRounding
+    | ChildBorderSize = 8 // float     ChildBorderSize
+    | PopupRounding = 9 // float     PopupRounding
+    | PopupBorderSize = 10 // float     PopupBorderSize
+    | FramePadding = 11 // ImVec2    FramePadding
+    | FrameRounding = 12 // float     FrameRounding
+    | FrameBorderSize = 13 // float     FrameBorderSize
+    | ItemSpacing = 14 // ImVec2    ItemSpacing
+    | ItemInnerSpacing = 15 // ImVec2    ItemInnerSpacing
+    | IndentSpacing = 16 // float     IndentSpacing
+    | CellPadding = 17 // ImVec2    CellPadding
+    | ScrollbarSize = 18 // float     ScrollbarSize
+    | ScrollbarRounding = 19 // float     ScrollbarRounding
+    | GrabMinSize = 20 // float     GrabMinSize
+    | GrabRounding = 21 // float     GrabRounding
+    | TabRounding = 22 // float     TabRounding
+    | TabBorderSize = 23 // float     TabBorderSize
+    | TabBarBorderSize = 24 // float     TabBarBorderSize
+    | TableAngledHeadersAngle = 25 // float  TableAngledHeadersAngle
+    | TableAngledHeadersTextAlign = 26 // ImVec2 TableAngledHeadersTextAlign
+    | ButtonTextAlign = 27 // ImVec2    ButtonTextAlign
+    | SelectableTextAlign = 28 // ImVec2    SelectableTextAlign
+    | SeparatorTextBorderSize = 29 // float  SeparatorTextBorderSize
+    | SeparatorTextAlign = 30 // ImVec2    SeparatorTextAlign
+    | SeparatorTextPadding = 31 // ImVec2    SeparatorTextPadding
+
+type ImGuiDir =
+    | None = -1
+    | Left = 0
+    | Right = 1
+    | Up = 2
+    | Down = 3
+
+[<Flags>]
+type ImGuiHoveredFlags =
+    | None = 0
+    | ChildWindows = (1 <<< 0)
+    | RootWindow = (1 <<< 1)
+    | AnyWindow = (1 <<< 2)
+    | NoPopupHierarchy = (1 <<< 3)
+    // | DockHierarchy = 1 <<< 4
+    | AllowWhenBlockedByPopup = (1 <<< 5)
+    // | AllowWhenBlockedByModal = 1 <<< 6
+    | AllowWhenBlockedByActiveItem = (1 <<< 7)
+    | AllowWhenOverlappedByItem = (1 <<< 8)
+    | AllowWhenOverlappedByWindow = (1 <<< 9)
+    | AllowWhenDisabled = (1 <<< 10)
+    | NoNavOverride = (1 <<< 11)
+    | AllowWhenOverlapped = ((1 <<< 8) ||| (1 <<< 9)) // (AllowWhenOverlappedByItem | AllowWhenOverlappedByWindow)
+    | RectOnly = ((1 <<< 5) ||| (1 <<< 7) ||| ((1 <<< 8) ||| (1 <<< 9))) // (AllowWhenBlockedByPopup ||| AllowWhenBlockedByActiveItem ||| AllowWhenOverlapped)
+    | RootAndChildWindows = ((1 <<< 1) ||| (1 <<< 0)) // (RootWindow ||| ChildWindows)
+    | ForTooltip = (1 <<< 12)
+    | Stationary = (1 <<< 13)
+    | DelayNone = (1 <<< 14)
+    | DelayShort = (1 <<< 15)
+    | DelayNormal = (1 <<< 16)
+    | NoSharedDelay = (1 <<< 17)
