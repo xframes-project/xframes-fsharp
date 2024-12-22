@@ -7,7 +7,7 @@ open System.Threading
 open System.Collections.Generic
 open Externs
 open Types
-open WidgetNodeJsonAdapter
+open JsonAdapters
 
 module WidgetRegistrationService =
     let idGeneratorLock = new ReaderWriterLockSlim()
@@ -72,7 +72,7 @@ module WidgetRegistrationService =
         | None -> printfn "No event handler for ID %d" id
 
     let createWidget(widget: RawChildlessWidgetNodeWithId) =
-        let json = JsonConvert.SerializeObject(jsonAdapter.ToJson(widget))
+        let json = JsonConvert.SerializeObject(WidgetNodeJsonAdapter.childlessWidgetNodeToJson(widget))
         setElement(json)
 
     let patchWidget (Id: int, data: Map<string, obj>) =

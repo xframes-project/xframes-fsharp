@@ -6,11 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Enums.fs" />
     <Compile Include="Types.fs" />
-	<Compile Include="Enums.fs" />
     <Compile Include="Theme.fs" />
 	<Compile Include="Externs.fs" />
-	<Compile Include="WidgetNodeJsonAdapter.fs" />
+	<Compile Include="JsonAdapters.fs" />
 	<Compile Include="Services.fs" />
 	<Compile Include="WidgetHelpers.fs" />
     <Compile Include="Widgets.fs" />
