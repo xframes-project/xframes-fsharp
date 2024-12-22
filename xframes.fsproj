@@ -8,6 +8,7 @@
   <ItemGroup>
     <Compile Include="Enums.fs" />
     <Compile Include="Types.fs" />
+    <Compile Include="StyleHelpers.fs" />
     <Compile Include="Theme.fs" />
 	<Compile Include="Externs.fs" />
 	<Compile Include="JsonAdapters.fs" />
