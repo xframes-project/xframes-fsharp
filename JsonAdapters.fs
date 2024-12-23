@@ -4,21 +4,10 @@ open System.Collections.Generic
 open System.Reactive.Subjects
 open Types
 
-module WidgetNodeJsonAdapter =
-    let fromJson(json: Map<string, obj>) =
-        ignore()
-
-    let toJson(widgetNode: RawWidgetNodeWithId) : Map<string, obj> =
-        let props = widgetNode.Props |> Map.map (fun _ v -> box v)
-        props
-        |> Map.add "id" (box widgetNode.Id)
-        |> Map.add "type" (box (widgetNode.Type.ToString()))
-
-    let childlessWidgetNodeToJson(widgetNode: RawChildlessWidgetNodeWithId) : Map<string, obj> =
-        let props = widgetNode.Props |> Map.map (fun _ v -> box v)
-        props
-        |> Map.add "id" (box widgetNode.Id)
-        |> Map.add "type" (box (widgetNode.Type.ToString()))
+let mergeOptionalMap (baseData: Map<string, obj>) (optionalMap: Map<string, obj> option): Map<string, obj> =
+    match optionalMap with
+    | Some map -> Map.fold (fun acc key value -> Map.add key value acc) baseData map
+    | None -> baseData
 
 
 module StyleJsonAdapter =
@@ -142,8 +131,8 @@ module StyleJsonAdapter =
             |> box
         | BaseDrawStyleProperty.Rounding r -> r
 
-    let baseDrawStyleToJson (yogaStyle: Map<BaseDrawStylePropertyKey, BaseDrawStyleProperty>) : Map<string, obj> =
-        yogaStyle
+    let baseDrawStyleToJson (baseDrawStyle: BaseDrawStyle) : Map<string, obj> =
+        baseDrawStyle
         |> Map.fold (fun acc key value ->
             let keyString = baseDrawStylePropertyKeyToString key
             acc.Add(keyString, baseDrawStylePropertyToJsonValue value)
@@ -189,3 +178,99 @@ module StyleJsonAdapter =
         | None -> ignore()
 
         baseData
+
+    let nodeStyleToJson(nodeStyle: NodeStyle): Map<string, obj> =
+        let baseData: Map<string, obj> = Map.empty
+
+        let baseData =
+            nodeStyle.BaseDrawStyle
+            |> Option.map baseDrawStyleToJson
+            |> mergeOptionalMap baseData
+
+        let baseData =
+            nodeStyle.YogaStyle
+            |> Option.map yogaStyleToJson
+            |> mergeOptionalMap baseData
+
+        baseData
+
+    let widgetStyleToJson(widgetStyle: WidgetStyle): Map<string, obj> =
+        let baseData: Map<string, obj> = Map.empty
+
+        let baseData =
+            widgetStyle.StyleRules
+            |> Option.map styleRulesToJson
+            |> mergeOptionalMap baseData
+
+        let baseData =
+            widgetStyle.BaseDrawStyle
+            |> Option.map baseDrawStyleToJson
+            |> mergeOptionalMap baseData
+
+        let baseData =
+            widgetStyle.YogaStyle
+            |> Option.map yogaStyleToJson
+            |> mergeOptionalMap baseData
+
+        baseData
+
+
+//let addStyleIfPresent(styleKey: string, props: Map<string, obj>, widgetType: WidgetTypes): Map<string, obj> option =
+//    match widgetType with
+//    | WidgetTypes.Node ->
+//        match props.TryFind(styleKey) with
+//        | Some (style : obj) ->
+//            match style :?> NodeStyle with
+//            | style -> Some(StyleJsonAdapter.nodeStyleToJson(style))
+//        | None -> None
+//    | _ ->
+//        match props.TryFind(styleKey) with
+//        | Some (style : obj) ->
+//            match style :?> WidgetStyle with
+//            | style -> Some(StyleJsonAdapter.widgetStyleToJson(style))
+//        | None -> None
+
+let addStyleIfPresent (styleKey: string, props: Map<string, obj>, widgetType: WidgetTypes) : Map<string, obj> option =
+    props.TryFind(styleKey)
+    |> Option.bind (fun style ->
+        match widgetType, style with
+        | WidgetTypes.Node, (:? NodeStyle as nodeStyle) ->
+            Some (StyleJsonAdapter.nodeStyleToJson nodeStyle)
+        | _, (:? WidgetStyle as widgetStyle) ->
+            Some (StyleJsonAdapter.widgetStyleToJson widgetStyle)
+        | _ -> None
+    )
+
+module WidgetNodeJsonAdapter =
+    let fromJson(json: Map<string, obj>) =
+        ignore()
+
+    let toJson(widgetNode: RawWidgetNodeWithId) : Map<string, obj> =
+        let props = widgetNode.Props |> Map.map (fun _ v -> box v)
+
+        let propsWithStyles =
+            [ "style"; "hoverStyle"; "activeStyle"; "disabledStyle" ]
+            |> List.fold (fun acc key ->
+                match addStyleIfPresent(key, acc, widgetNode.Type) with
+                | Some styleJson -> Map.add key (box styleJson) acc
+                | None -> acc
+            ) props
+
+        propsWithStyles
+        |> Map.add "id" (box widgetNode.Id)
+        |> Map.add "type" (box (widgetNode.Type.ToString()))
+
+    let childlessWidgetNodeToJson(widgetNode: RawChildlessWidgetNodeWithId) : Map<string, obj> =
+        let props = widgetNode.Props |> Map.map (fun _ v -> box v)
+
+        let propsWithStyles =
+            [ "style"; "hoverStyle"; "activeStyle"; "disabledStyle" ]
+            |> List.fold (fun acc key ->
+                match addStyleIfPresent(key, acc, widgetNode.Type) with
+                | Some styleJson -> Map.add key (box styleJson) acc
+                | None -> acc
+            ) props
+
+        propsWithStyles
+        |> Map.add "id" (box widgetNode.Id)
+        |> Map.add "type" (box (widgetNode.Type.ToString()))

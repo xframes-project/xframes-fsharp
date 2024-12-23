@@ -150,3 +150,10 @@ let makeNodeStyle(maybeYogaStyle: Result<YogaStyle, string>, maybeBaseDrawStyle:
             | Ok baseDrawStyle -> Some baseDrawStyle
             | Error _ -> None
     }
+
+let widgetNodeStyle(maybeStyleRules: StyleRules option, maybeYogaStyle: YogaStyle option, maybeBaseDrawStyle: BaseDrawStyle option): WidgetStyle =
+    {
+        StyleRules = maybeStyleRules
+        YogaStyle = maybeYogaStyle
+        BaseDrawStyle = maybeBaseDrawStyle
+    }

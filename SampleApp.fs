@@ -1,7 +1,6 @@
 ﻿module SampleApp
 
 open System.Reactive.Subjects
-open System.Reactive.Linq
 open System
 open Widgets
 open Types
@@ -35,6 +34,13 @@ let yogaStyleProperties: (YogaStylePropertyKey * YogaStyleProperty) list = [
     (YogaStylePropertyKey.Flex, YogaStyleProperty.Flex 1.0)
     (YogaStylePropertyKey.Width, YogaStyleProperty.Width (Value 200.0))
     (YogaStylePropertyKey.Height, YogaStyleProperty.Height (Percentage "100%"))
+    (YogaStylePropertyKey.Margin, YogaStyleProperty.Margin (Map.ofList [
+        Edge.Right, 5.0
+        Edge.Bottom, 3.0
+    ]))
+    (YogaStylePropertyKey.Gap, YogaStyleProperty.Gap (Map.ofList [
+        Gutter.Row, 5.0
+    ]))
 ]
 
 let yogaStyleResult = createYogaStyleWithValidation(yogaStyleProperties)
@@ -73,6 +79,34 @@ printfn "%s" (JsonConvert.SerializeObject(StyleJsonAdapter.styleRulesToJson(s)))
 type App() =
     inherit BaseComponent()
 
+    let todoStyle: WidgetStyle = widgetNodeStyle(
+        Some(makeStyleRules(
+            None,
+            Some({ 
+                Name = "roboto-regular"
+                Size = 32
+            }),
+            None,
+            None
+        )),
+        None,
+        None
+    )
+
+    let buttonStyle: WidgetStyle = widgetNodeStyle(
+        Some(makeStyleRules(
+            None,
+            Some({ 
+                Name = "roboto-regular"
+                Size = 32
+            }),
+            None,
+            None
+        )),
+        None,
+        None
+    )
+
     let onClick() =
         let newTodoItem = { Text = "New Todo"; Done = false }
 
@@ -108,14 +142,13 @@ type App() =
                     [
                         for todoItem in todoItems do
                             Renderable.WidgetNode(
-                                unformattedText (sprintf "%s (%s)." todoItem.Text (if todoItem.Done then "done" else "to do"))
+                                unformattedText((sprintf "%s (%s)." todoItem.Text (if todoItem.Done then "done" else "to do")), Some(todoStyle))
                             )
                     ]
-                | _ -> []  // Handle case where the cast fails
             | None -> []
 
         let children = 
-            [ Renderable.WidgetNode(button("Add todo", Some onClick)) ] @ textNodes
+            [ Renderable.WidgetNode(button("Add todo", Some onClick, Some(buttonStyle)))] @ textNodes
 
         WidgetNode (
             node children
