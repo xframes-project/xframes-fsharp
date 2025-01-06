@@ -73,7 +73,6 @@ let main argv =
 
 
     let onInit = Marshal.GetFunctionPointerForDelegate(Action(fun () -> onInitLogic()))
-    
     let onTextChangedPtr = Marshal.GetFunctionPointerForDelegate(onTextChangedDelegate)
     let onComboChangedPtr = Marshal.GetFunctionPointerForDelegate(onComboChangedDelegate)
     let onNumericValueChangedPtr = Marshal.GetFunctionPointerForDelegate(onNumericValueChanged)
