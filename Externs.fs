@@ -47,12 +47,17 @@ extern void showDebugWindow()
 //let onTextChangedDelegate = 
 //    Marshal.GetFunctionPointerForDelegate(Action<int, string>(fun id value -> onTextChangedHandler(id, value)))
 
+let marshalFloatArray (ptr: IntPtr) (length: int) : float[] =
+    let managedArray = Array.zeroCreate<float> length
+    Marshal.Copy(ptr, managedArray, 0, length)
+    managedArray
+
 type OnInitCb = unit -> unit
 type OnTextChangedCb = delegate of int * string -> unit
-type OnComboChangedCb = int * int -> unit
-type OnNumericValueChangedCb = int * float -> unit
-type OnBooleanValueChangedCb = int * bool -> unit
-type OnMultipleNumericValuesChangedCb = int * float[] -> unit
+type OnComboChangedCb = delegate of int * int -> unit
+type OnNumericValueChangedCb = delegate of int * float -> unit
+type OnBooleanValueChangedCb = delegate of int * bool -> unit
+type OnMultipleNumericValuesChangedCb = delegate of int * IntPtr * int -> unit
 type OnClickCb = delegate of int -> unit
 
 [<DllImport("xframesshared.dll", CallingConvention = CallingConvention.Cdecl)>]

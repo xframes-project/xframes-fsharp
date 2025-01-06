@@ -49,11 +49,14 @@ let rec keepProcessRunning () =
             do! Task.Delay(1000) |> Async.AwaitTask
     }
 
-// Create an instance of the delegate
 let onTextChangedDelegate = OnTextChangedCb(fun id value -> printfn "Text changed: %d, %s" id value)
-
-// Create an instance of the delegate
-let OnClickDelegate = OnClickCb(fun id -> WidgetRegistrationService.dispatchOnClickEvent(id))
+let onComboChangedDelegate = OnComboChangedCb(fun id value -> printfn "Value changed: %d, %d" id value)
+let onNumericValueChanged = OnNumericValueChangedCb(fun id value -> printfn "Value changed: %d, %f" id value)
+let onBooleanValueChanged = OnBooleanValueChangedCb(fun id value -> printfn "Value changed: %d, %b" id value)
+let onMultipleNumericValuesChanged = OnMultipleNumericValuesChangedCb(fun id rawValues numValues -> 
+    for value in marshalFloatArray rawValues numValues do
+        printfn "Value: %f" value)
+let onClickDelegate = OnClickCb(fun id -> WidgetRegistrationService.dispatchOnClickEvent(id))
 
 [<EntryPoint>]
 let main argv =
@@ -72,10 +75,12 @@ let main argv =
     let onInit = Marshal.GetFunctionPointerForDelegate(Action(fun () -> onInitLogic()))
     
     let onTextChangedPtr = Marshal.GetFunctionPointerForDelegate(onTextChangedDelegate)
-    let OnClickPtr = Marshal.GetFunctionPointerForDelegate(OnClickDelegate)
+    let onComboChangedPtr = Marshal.GetFunctionPointerForDelegate(onComboChangedDelegate)
+    let onNumericValueChangedPtr = Marshal.GetFunctionPointerForDelegate(onNumericValueChanged)
+    let onBooleanValueChangedPtr = Marshal.GetFunctionPointerForDelegate(onBooleanValueChanged)
+    let onMultipleNumericValuesChangedPtr = Marshal.GetFunctionPointerForDelegate(onMultipleNumericValuesChanged)
+    let onClickPtr = Marshal.GetFunctionPointerForDelegate(onClickDelegate)
 
-    let onComboChanged = Marshal.GetFunctionPointerForDelegate(Action(fun () -> printfn "Initialization callback called!"))
-    let onNumericValueChanged = Marshal.GetFunctionPointerForDelegate(Action(fun () -> printfn "Initialization callback called!"))
     let onBooleanValueChanged = Marshal.GetFunctionPointerForDelegate(Action(fun () -> printfn "Initialization callback called!"))
     let onMultipleNumericValuesChanged = Marshal.GetFunctionPointerForDelegate(Action(fun () -> printfn "Initialization callback called!"))
 
@@ -83,7 +88,7 @@ let main argv =
     let themeJson = JsonConvert.SerializeObject(colorsDict)
 
 
-    init(assetsPath, fontDefsJson, themeJson, onInit, onTextChangedPtr, onComboChanged, onNumericValueChanged, onBooleanValueChanged, onMultipleNumericValuesChanged, OnClickPtr)
+    init(assetsPath, fontDefsJson, themeJson, onInit, onTextChangedPtr, onComboChangedPtr, onNumericValueChangedPtr, onBooleanValueChangedPtr, onMultipleNumericValuesChangedPtr, onClickPtr)
 
     let appProcess = keepProcessRunning ()
     Async.Start appProcess
