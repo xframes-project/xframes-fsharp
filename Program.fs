@@ -81,12 +81,8 @@ let main argv =
     let onMultipleNumericValuesChangedPtr = Marshal.GetFunctionPointerForDelegate(onMultipleNumericValuesChanged)
     let onClickPtr = Marshal.GetFunctionPointerForDelegate(onClickDelegate)
 
-    let onBooleanValueChanged = Marshal.GetFunctionPointerForDelegate(Action(fun () -> printfn "Initialization callback called!"))
-    let onMultipleNumericValuesChanged = Marshal.GetFunctionPointerForDelegate(Action(fun () -> printfn "Initialization callback called!"))
-
     let fontDefsJson = JsonConvert.SerializeObject(StyleJsonAdapter.fontDefsToJson(fontsDictionary))
     let themeJson = JsonConvert.SerializeObject(colorsDict)
-
 
     init(assetsPath, fontDefsJson, themeJson, onInit, onTextChangedPtr, onComboChangedPtr, onNumericValueChangedPtr, onBooleanValueChangedPtr, onMultipleNumericValuesChangedPtr, onClickPtr)
 
